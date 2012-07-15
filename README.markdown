@@ -18,6 +18,46 @@ Requirements
 ------------
  * PHP &ge; 5.3.5
 
+Quick Start
+-----------
+ 1. Include CuteControllers as a git submodule. You could also download it, but it doesn't feel right.
+    1. `git submodule add git://github.com/tylermenezes/CuteControllers.git .submodules/CuteControllers`
+    2. `ln -s .submodules/CuteControllers/CuteControllers Includes/CuteControllers`
+ 2. Run an SPL class loader. Here's an example of a good one: [https://gist.github.com/426304]
+    1. `git submodule add git://gist.github.com/426304.git .submodules/SPLClassLoader`
+    2. `ln -s .submodules/SPLClassLoader/SPLClassLoader.php Includes/SPLClassLoader.php`
+    3. Include it in your index file:
+            require_once('Includes/SplClassLoader.php');
+            $loader = new SplClassLoader();
+            $loader->register();
+ 3. Make a controller. Here's an example to get you started.
+        <?php
+        namespace MyApp\Controllers\Test;
+
+        use \CuteControllers;
+
+        class Sample extends CuteControllers\Base\Web {
+            public function index()
+            {
+                echo "Hello! This is a test!";
+            }
+
+            public function demo()
+            {
+                echo "In real life, putting echos in a controller is probably a bad idea.";
+            }
+        }
+ 4. Save it to `[/path/to/your/project]/controllers/test/sample.php`
+ 5. Start the router! In your index file, run:
+        \CuteControllers\Router::start();
+ 6. Set up your .htaccess file, if you're using Apache and don't want to have to have /index.php/
+ 7. Visit it on the web! Here's a list of URLs which should work:
+    * `/test/sample/index`
+    * `/test/sample` (Same as above - uses the default method "index" in the controller)
+    * `/test/sample/demo`
+    * `/test/sample/demo.html` (Same as above, extensions are ignored when using the Web Controller.
+      See the Controller Types section below.)
+
 Router
 ======
 The Router class (static!) takes care of all the routing. It has a few useful methods:
@@ -26,8 +66,8 @@ The Router class (static!) takes care of all the routing. It has a few useful me
 ---------------------
 Adds an alias from `$from` to `$to`. `$from` is a PCRE, and `$to` can use groups from `$from`.
 
-`register_filter($lambda($request))`
-------------------------------------
+`filter($lambda($request))`
+----------------------------
 Adds a pre-routing filter. This is essentially a more general-purpose rewrite, where you can base your
 controller structure on any arbitrary element of the request which you'd like.
 
@@ -38,10 +78,13 @@ router works, in more detail:
 
  1. Apply all filters (see above)
  2. Apply all rewrites (see above)
- 3. Check if a matching controller exists in the following order:
-    1. `$path/:path/:file.php` (where `:path` and `:file` are from the request object)
-    2. `$path/:path/:file/index.php`
- 4. If a matching controller was found, call it and we're done! Otherwise, the page wasn't found:
+ 3. Check if a matching controller exists in the following order (where `:path` and `:file` are from the request object):
+    1. `$path/:path/:file.php`
+    2. `$path/:path.php`
+ 4. If a matching controller was found, call it and we're done:
+    1. If `:file` wasn't in the path (case 2 above), call the `:file` function.
+    2. Otherwise, call the `index` function.
+ 5. Otherwise, the page wasn't found:
     1. Send a 404 error.
-    2. Traverse up the directories, until both: (a) a directory is found, and (b) it has an _error.php ErrorController.
+    2. TODO: Traverse up the directories, until both: (a) a directory is found, and (b) it has an _error.php ErrorController.
     3. If none was found, throw an exception.
