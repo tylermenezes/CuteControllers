@@ -34,9 +34,7 @@ Quick Start
         <?php
         namespace MyApp\Controllers\Test;
 
-        use \CuteControllers;
-
-        class Sample extends CuteControllers\Base\Web {
+        class Sample extends \CuteControllers\Base\Web {
             public function index()
             {
                 echo "Hello! This is a test!";
@@ -58,6 +56,71 @@ Quick Start
     * `/test/sample/demo.html` (Same as above, extensions are ignored when using the Web Controller.
       See the Controller Types section below.)
 
+
+Controllers
+===========
+Controllers are classes implementing `Base\Controller` (those which provide a `route()` method). You should never
+override `__construct` in a controller, always override `before()`.
+
+The current Request is available from any controller at `$this->request`.
+
+Generally you'll want to use one of the pre-built controller types (see below).
+
+
+Controller Types
+================
+CuteControllers implements several useful controller types by default. (You can define your own by extending from
+`\Base\Controller` and implementing the `route()` method.)
+
+Web
+---
+Routes to a method with the same name as the file name. (e.g. `/test/xyz` => `function xyz()`). If the file name is blank,
+it routes to a method named `index`. Ignores the file extension. Will only route to public methods.
+
+Rest
+----
+Similar to the Web controller, but provides several useful shortcuts for restful APIs. Routes to `:verb_:file` where `:verb`
+is the lowercase name of the HTTP verb the request was made with. If an object is `return`ed from the method, it will outputted
+in the appropriate format given the file extension (e.g. converted to JSON if the URL ends in .json). (If no file extension is
+present, it will assume HTML.)
+
+RestCrud
+--------
+Simplified version of the Rest controller. `/uri/to/controller/:id` routes to `create(:id)`, `read(:id)`, `update(:id)`, and
+`delete(:id)` methods, depending on the HTTP verb. If no `:id` is specified, routes to `list()`, except if both the query
+paramater `search` is defined, and a method `search(:term)` exists. As with the REST controller above, if the function
+returns a non-null value, it will output the appropriate response serialization.
+
+Request
+=======
+The Request object provides useful methods for finding out what the user asked for.
+
+Properties
+----------
+ * `ip` - The user's IP
+ * `username` - The username (if there is one)
+ * `password` - The password (if there is one)
+ * `method` - Uppercase HTTP verb
+ * `scheme` - http or https
+ * `hostname` - The hostname the user is visiting (e.g. `localhost`, `foo.com`, etc)
+ * `port` - The port the user's connected to, usually 80 or 443
+ * `uri` - App-relative URI
+ * `full_uri` - Full URI, relative to the webroot. This includes things such as `/folder/index.php/`.
+ * `path` - Part of the URI used to find the controller file (magic - based on `uri`)
+ * `file` - Part of the URI not used to find the controller file, e.g. the method name in a Web controller. (magic -
+   based on `uri`)
+ * `file_name` - Part of the file before the last ., if one exists. (magic - based on `uri`)
+ * `file_ext` - Part of the file after the last ., if one exists. (magic - based on `uri`)
+ * `segments` - Array of all path segments. (magic, based on `uri`)
+ * `query` - Part of the URL after the ?
+ * `body` - Anything in the body of the HTTP request (such as during a `PATCH` request)
+
+`get`, `post`, and `request`
+----------------------------
+The request object also provides useful shortcuts for `$_GET`, `$_POST`, and `$_REQUEST`. These are the methods `get(:name)`,
+`post(:name)`, and `request(:name)`. They are functionally equivalent to their global variable counterparts.
+
+
 Router
 ======
 The Router class (static!) takes care of all the routing. It has a few useful methods:
@@ -68,8 +131,8 @@ Adds an alias from `$from` to `$to`. `$from` is a PCRE, and `$to` can use groups
 
 `filter($lambda($request))`
 ----------------------------
-Adds a pre-routing filter. This is essentially a more general-purpose rewrite, where you can base your
-controller structure on any arbitrary element of the request which you'd like.
+Adds a pre-routing filter. This is essentially a more general-purpose rewrite, where you can base your controller structure
+on any arbitrary element of the request which you'd like.
 
 `start($path)`
 --------------
@@ -88,3 +151,9 @@ router works, in more detail:
     1. Send a 404 error.
     2. TODO: Traverse up the directories, until both: (a) a directory is found, and (b) it has an _error.php ErrorController.
     3. If none was found, throw an exception.
+
+Handling Errors
+===============
+All HTTP errors throw an exception of type `\CuteControllers\HttpError`. `getCode()` will return the HTTP error code, and
+`getMessage()` will return the associated HTTP error message. If you catch all exceptions of this type from the
+`Router::start(0)` method, you can handle them in whatever way works best in your application.

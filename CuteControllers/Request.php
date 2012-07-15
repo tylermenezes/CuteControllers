@@ -12,34 +12,30 @@ class Request
     public $hostname;
     public $port;
     public $uri;
-    public $extenstion;
-    public $extension;
+    public $full_uri;
     public $query;
-    public $fragment;
-    public $stdin;
+    public $body;
     protected $_get;
     protected $_post;
 
-    public __construct($ip, $username, $password, $method, $url, $post, $stdin)
+    public function __construct($ip, $username, $password, $method, $scheme, $hostname, $port, $path, $full_path, $query, $post, $body)
     {
         $this->ip = $ip;
         $this->username = $username;
         $this->password = $password;
         $this->method = strtoupper($method);
 
-        $parts = parse_url($url);
-        $this->scheme = $parts['scheme'];
-        $this->host = $parts['host'];
-        $this->uri = $parts['path'];
-        $this->query = $parts['query'];
-        $this->fragment = $parts['fragment'];
+        $this->scheme =$scheme;
+        $this->hostname = $hostname;
+        $this->port = $port;
+        $this->uri = $path;
+        $this->full_uri = $full_path;
+        $this->query = $query;
 
-        $this->extension = substr($this->file, strrpos($this->file, '.') + 1);
-
-        parse_str($this->query, $this->get);
+        parse_str($this->query, $this->_get);
         $this->post = $post;
 
-        $this->stdin = $stdin;
+        $this->body = $body;
     }
 
     private static $current = null;
@@ -47,26 +43,28 @@ class Request
     /**
      * Gets the request which represents the current HTTP session
      */
-    public static current()
+    public static function current()
     {
-        if (!isset(self::current)) {
-            $current = new Request($_SERVER['REMOTE_ADDR'], $_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'], $_SERVER['REQUEST_METHOD'],
-                                   full_url(), $_POST, file_get_contents('php://input'));
+        if (!isset(static::$current)) {
+            // First, get the URI
+            $full_uri = $_SERVER['REQUEST_URI'];
+            $full_uri = strpos($full_uri, '?') !== FALSE? substr($full_uri, 0, strrpos($full_uri, '?')) : $full_uri;
+
+            static::$current = new Request($_SERVER['REMOTE_ADDR'],
+                                           isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE,
+                                           isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE,
+                                           $_SERVER['REQUEST_METHOD'],
+                                           isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'? 'https' : 'http',
+                                           $_SERVER['SERVER_NAME'],
+                                           $_SERVER['SERVER_PORT'],
+                                           isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] : '',
+                                           $full_uri,
+                                           $_SERVER['QUERY_STRING'],
+                                           $_POST,
+                                           file_get_contents('php://input'));
         }
 
-        return self::current;
-    }
-
-    /**
-     * Gets the fully qualified URL associated with the request
-     * @return string Fully-qualified URL
-     */
-    private static function full_url()
-    {
-        $s = empty($_SERVER["HTTPS"]) ? '' : ($_SERVER["HTTPS"] == "on") ? "s" : "";
-        $protocol = substr(strtolower($_SERVER["SERVER_PROTOCOL"]), 0, strpos(strtolower($_SERVER["SERVER_PROTOCOL"]), "/")) . $s;
-        $port = ($_SERVER["SERVER_PORT"] == "80") ? "" : (":".$_SERVER["SERVER_PORT"]);
-        return $protocol . "://" . $_SERVER['SERVER_NAME'] . $port . $_SERVER['REQUEST_URI'];
+        return static::$current;
     }
 
     /**
@@ -76,7 +74,7 @@ class Request
      */
     public function get($name)
     {
-        return $this->_get[$name];
+        return isset($this->_get[$name])? $this->_get[$name] : NULL;
     }
 
     /**
@@ -86,11 +84,7 @@ class Request
      */
     public function post($name)
     {
-        if (!$this->method !== 'POST') {
-            throw new \Exception('Cannot read postdata on a non-POST request.');
-        }
-
-        return $this->_post[$name];
+        return isset($this->_post[$name])? $this->_post[$name] : NULL;
     }
 
     /**
@@ -115,13 +109,19 @@ class Request
                 $pathparts = explode('/', $this->uri);
                 return array_pop($pathparts);
                 break;
-            case 'filename':
-                return substr($this->file, 0, strrpos($this->file, '.'));
+            case 'file_name':
+                return strpos($this->file, '.') !== FALSE? substr($this->file, 0, strrpos($this->file, '.')) : $this->file;
+                break;
+            case 'file_ext':
+                return strrpos($this->file, '.') !== FALSE? substr($this->file, strrpos($this->file, '.') + 1) : FALSE;
                 break;
             case 'path':
                 $pathparts = explode('/', $this->uri);
                 array_pop($pathparts);
                 return implode('/', $pathparts);
+                break;
+            case 'segments':
+                return explode('/', $this->uri);
                 break;
         }
     }

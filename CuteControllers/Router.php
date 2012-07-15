@@ -7,26 +7,50 @@ class Router
     protected static $filters = array();
     protected static $rewrites = array();
 
+    /**
+     * Starts routing for a controller folder
+     * @param  string $path Path to the controllers folder
+     */
     public static function start($path)
     {
         $request = static::apply_filters(Request::current());
         $request = static::apply_rewrites($request);
 
         // Now we do the actual routing
-        $controller =
-                        static::get_controller($path . '/' . $request->path . '/' $request->filename '.php', $request) ||
-                        static::get_controller($path . '/' . $request->path . '/' $request->filename . '/index.php', $request);
-
-        if ($controller === FALSE) {
-            // Throw 404
-            // TODO: Recurse up the path, looking for a 404 handler.
+        // First off, if there is no path, there will have to be a controller.
+        if ($request->path === '') {
+            if ($request->file) {
+                $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
+                $controller = static::get_controller($path, $request);
+            } else {
+                $request->path = '/index';
+                $controller = static::get_controller($path, $request);
+            }
         } else {
+            $controller = static::get_controller($path, $request);
+            if ($controller === FALSE) {
+                // Maybe they want to call the index function
+                $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
+                $controller = static::get_controller($path, $request);
+            }
+        }
+
+        if ($controller !== FALSE) {
             $controller->route();
+        } else {
+            throw new HttpError(404);
         }
     }
 
-    protected static function get_controller($path, $request)
+    /**
+     * Gets a controller associated with a request object
+     * @param  string  $path    Path to controllers folder
+     * @param  Request $request Request object to load the controller for
+     * @return mixed            False if the controller doesn't exist, otherwise the controller
+     */
+    protected static function get_controller($path, Request $request)
     {
+        $path = $path . $request->path . '.php';
         if (file_exists($path))
         {
             include_once($path);
@@ -86,7 +110,7 @@ class Router
      */
     public static function filter($lambda)
     {
-        $this->filters[] = $lambda;
+        static::$filters[] = $lambda;
     }
 
     /**
@@ -94,9 +118,9 @@ class Router
      * @param  Request $request Request to which to apply filters
      * @return Request          Result Request
      */
-    protected static function apply_filters($request)
+    protected static function apply_filters(Request $request)
     {
-        foreach ($this->filters as $filter)
+        foreach (static::$filters as $filter)
         {
             $request = $filter($request);
         }
@@ -111,7 +135,7 @@ class Router
      */
     public static function rewrite($from, $to)
     {
-        $this->rewrites[] = array($from, $to);
+        static::$rewrites[] = array($from, $to);
     }
 
     /**
@@ -119,9 +143,9 @@ class Router
      * @param  Request $request Request to which to apply rewrites
      * @return Request          Result Request
      */
-    protected static function apply_rewrites($request)
+    protected static function apply_rewrites(Request $request)
     {
-        foreach ($this->rewrites as $rewrite)
+        foreach (static::$rewrites as $rewrite)
         {
             $from = $rewrite[0];
             $to = $rewrite[1];
