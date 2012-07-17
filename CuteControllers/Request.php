@@ -33,7 +33,7 @@ class Request
         $this->query = $query;
 
         parse_str($this->query, $this->_get);
-        $this->post = $post;
+        $this->_post = $post;
 
         $this->body = $body;
     }
@@ -94,7 +94,7 @@ class Request
      */
     public function request($name)
     {
-        return $this->get($name) || $this->post($name);
+        return ($this->get($name) !== NULL)? $this->get($name) : $this->post($name);
     }
 
     /**
