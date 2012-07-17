@@ -4,8 +4,15 @@ namespace CuteControllers;
 
 class HttpError extends \Exception
 {
-    public function __construct($code)
+    protected $details = NULL;
+    public function getDetails()
     {
+        return $this->details;
+    }
+
+    public function __construct($code, $details = NULL)
+    {
+        $this->details = $details;
         $this->code = $code;
         switch($this->code)
         {

@@ -6,11 +6,13 @@ class RestCrud extends Rest
 {
     public function route()
     {
-        if ($this->request->file_name === '') {
-            if ($this->request->request('search') !== NULL && method_exists($this, 'search')) {
-                $method = 'search';
+        if ($this->request->file_name === '' && $this->request->method === 'GET') {
+            if ($this->request->request('search') !== NULL && method_exists($this, 'get_search')) {
+                $method = 'get_search';
+            } else if (method_exists($this, 'get_list')) {
+                $method = 'get_list';
             } else {
-                $method = 'list';
+                throw new \CuteControllers\HttpError(404);
             }
         } else {
             $method = strtolower($this->request->method);
@@ -21,9 +23,9 @@ class RestCrud extends Rest
             if (!$reflection->isPublic()) {
                 throw new \CuteControllers\HttpError(403);
             }
-            if ($method == 'list') {
+            if ($method == 'get_list') {
                 $this->generate_response($this->$method());
-            } else if ($method == 'search') {
+            } else if ($method == 'get_search') {
                 $this->generate_response($this->$method($this->request->request('search')));
             } else {
                 $this->generate_response($this->$method($this->request->file_name));
