@@ -30,7 +30,7 @@ class Rest extends Controller
             return;
         }
 
-        switch($this->request->file_ext || 'html') {
+        switch($this->request->file_ext) {
             case 'txt':
                 header("Content-type: text/plain");
                 echo $response;
@@ -44,6 +44,7 @@ class Rest extends Controller
                 echo $this->request->request('callback') . '(' . json_encode($response) . ');';
                 break;
             case 'html':
+            default:
                 header("Content-type: text/html");
                 echo $response;
                 break;
