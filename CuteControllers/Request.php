@@ -57,7 +57,7 @@ class Request
                                            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'? 'https' : 'http',
                                            $_SERVER['SERVER_NAME'],
                                            $_SERVER['SERVER_PORT'],
-                                           isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] : '',
+                                           isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] : (isset($_SERVER['REDIRECT_PATH_INFO'])? $_SERVER['REDIRECT_PATH_INFO'] : ''),
                                            $full_uri,
                                            $_SERVER['QUERY_STRING'],
                                            $_POST,
