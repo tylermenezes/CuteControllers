@@ -9,7 +9,10 @@ abstract class Controller
     public function __construct(\CuteControllers\Request $request)
     {
         $this->request = $request;
+        $this->before();
     }
+
+    public function before(){}
 
     protected function require_get()
     {
@@ -39,6 +42,11 @@ abstract class Controller
                 throw new \CuteControllers\HttpError(400);
             }
         }
+    }
+
+    protected function redirect($to)
+    {
+        \CuteControllers\Router::redirect($to);
     }
 
     abstract public function route();

@@ -22,6 +22,9 @@ class Router
             if ($request->file) {
                 $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
                 $controller = static::get_controller($path, $request);
+                if (substr($request->full_uri, -1) !== '/') {
+                    $request->full_uri .= '/';
+                }
             } else {
                 $request->path = '/index';
                 $controller = static::get_controller($path, $request);
@@ -31,6 +34,9 @@ class Router
             if ($controller === FALSE) {
                 // Maybe they want to call the index function
                 $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
+                if (substr($request->full_uri, -1) !== '/') {
+                    $request->full_uri .= '/';
+                }
                 $controller = static::get_controller($path, $request);
             }
         }
@@ -40,6 +46,33 @@ class Router
         } else {
             throw new HttpError(404);
         }
+    }
+
+    public static function get_app_uri()
+    {
+        $current_request = Request::current();
+        return substr($current_request->full_uri, 0, strlen($current_request->full_uri) - strlen($current_request->uri));
+    }
+
+    public static function get_link($to)
+    {
+        if (substr($to, 0, 1) === '/') {
+            $to = self::get_app_uri() . $to;
+        } else {
+            if (strpos($to, '://') === FALSE) {
+                $to = Request::current()->full_uri . '/' . $to;
+            } else {
+                // Fully qualified URL
+            }
+        }
+
+        return $to;
+    }
+
+    public static function redirect($to)
+    {
+        header('Location: ' . self::get_link($to));
+        exit;
     }
 
     /**
