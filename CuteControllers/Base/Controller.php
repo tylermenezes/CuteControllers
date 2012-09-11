@@ -11,6 +11,8 @@ abstract class Controller
         $this->request = $request;
         $this->before();
     }
+    
+    public function before(){}
 
     public function before(){}
 
