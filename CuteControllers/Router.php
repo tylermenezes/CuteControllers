@@ -51,7 +51,15 @@ class Router
     public static function get_app_uri()
     {
         $current_request = Request::current();
-        return substr($current_request->full_uri, 0, strlen($current_request->full_uri) - strlen($current_request->uri));
+        $uri = $current_request->uri;
+        if (substr($uri, -1) === '/' && substr($current_request->full_uri, -1) !== '/') {
+            $uri = substr($uri, 0, strlen($uri) - 1);
+        }
+        $url = substr($current_request->full_uri, 0, strlen($current_request->full_uri) - strlen($uri));
+        if (substr($url, -1) === '/') {
+            $url = substr($url, 0, strlen($url) - 1);
+        }
+        return $url;
     }
 
     public static function get_link($to)
