@@ -64,11 +64,18 @@ class Router
 
     public static function get_link($to)
     {
-        if (substr($to, 0, 1) === '/') {
+        if (strlen($to) == 0) {
+            $to = Request::current()->full_uri . '?' . Request::current()->query;
+        } else if (substr($to, 0, 1) == '?') {
+            $to = Request::current()->full_uri . $to;
+        } else if (substr($to, 0, 1) === '/') {
             $to = self::get_app_uri() . $to;
         } else {
             if (strpos($to, '://') === FALSE) {
-                $to = Request::current()->full_uri . '/' . $to;
+                $url_parts = explode('/', Request::current()->full_uri);
+                array_pop($url_parts);
+
+                $to = implode('/', $url_parts) . '/' . $to;
             } else {
                 // Fully qualified URL
             }
@@ -91,11 +98,15 @@ class Router
      */
     protected static function get_controller($path, Request $request)
     {
-        $path = $path . $request->path . '.php';
-        if (file_exists($path))
+        $path = $path . $request->path;
+        if (file_exists($path . ".php"))
         {
-            include_once($path);
-            $controller_name = static::get_class_name_from_file($path);
+            include_once($path . ".php");
+            $controller_name = static::get_class_name_from_file($path . '.php');
+            return new $controller_name($request);
+        } else if (file_exists($path . '/index.php')) {
+            include_once($path . "/index.php");
+            $controller_name = static::get_class_name_from_file($path . '/index.php');
             return new $controller_name($request);
         } else {
             return FALSE;
