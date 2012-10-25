@@ -5,11 +5,29 @@ namespace CuteControllers\Base;
 abstract class Controller
 {
     protected $request;
+    protected $action;
+    protected $positional_args;
 
-    public function __construct(\CuteControllers\Request $request)
+    public function __construct(\CuteControllers\Request $request, $action, $positional_args)
     {
         $this->request = $request;
+        $this->action = $action;
+        $this->positional_args = $positional_args;
         $this->before();
+    }
+
+    public function check_method($method_name, $num_params = NULL)
+    {
+        if (!method_exists($this, $method_name)) {
+            return false;
+        }
+
+        $reflection = new \ReflectionMethod($this, $method_name);
+        if ($num_params === NULL) {
+            return $reflection->isPublic();
+        } else {
+            return $reflection->getNumberOfRequiredParameters() === $num_params && $reflection->isPublic();
+        }
     }
 
     public function before(){}

@@ -6,18 +6,14 @@ class Web extends Controller
 {
     public function route()
     {
-        if ($this->request->file_name === '') {
-            $method = 'index';
-        } else {
-            $method = $this->request->file_name;
+        if ($this->action === NULL) {
+            $this->action = 'index';
         }
 
-        if (method_exists($this, $method)) {
-            $reflection = new \ReflectionMethod($this, $method);
-            if (!$reflection->isPublic()) {
-                throw new \CuteControllers\HttpError(403);
-            }
-            $this->$method();
+        $this->action = '__' . $this->action;
+
+        if ($this->check_method($this->action, count($this->positional_args))) {
+            echo call_user_func_array(array($this, $this->action), $this->positional_args);
         } else {
             throw new \CuteControllers\HttpError(404);
         }

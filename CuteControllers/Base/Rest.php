@@ -6,19 +6,14 @@ class Rest extends Controller
 {
     public function route()
     {
-        $method = strtolower($this->request->method) . '_';
-        if ($this->request->file_name === '') {
-            $method .= 'index';
-        } else {
-            $method .= $this->request->file_name;
+        if ($this->action === NULL) {
+            $this->action = 'index';
         }
 
-        if (method_exists($this, $method)) {
-            $reflection = new \ReflectionMethod($this, $method);
-            if (!$reflection->isPublic()) {
-                throw new \CuteControllers\HttpError(403);
-            }
-            $this->generate_response($this->$method());
+        $this->action = '__' . strtolower($this->request->method) . '_' . $this->action;
+
+        if ($this->check_method($this->action, count($this->positional_args))) {
+            $this->generate_response(call_user_func_array(array($this, $this->action), $this->positional_args));
         } else {
             throw new \CuteControllers\HttpError(404);
         }

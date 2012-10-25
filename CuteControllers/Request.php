@@ -2,6 +2,10 @@
 
 namespace CuteControllers;
 
+// Load these in case there's no SPL class loader
+require_once('Router.php');
+require_once('HttpError.php');
+
 class Request
 {
     public $ip;
@@ -9,7 +13,7 @@ class Request
     public $password;
     public $method;
     public $scheme;
-    public $hostname;
+    public $host;
     public $port;
     public $uri;
     public $full_uri;
@@ -18,7 +22,7 @@ class Request
     protected $_get;
     protected $_post;
 
-    public function __construct($ip, $username, $password, $method, $scheme, $hostname, $port, $path, $full_path, $query, $post, $body)
+    public function __construct($ip, $username, $password, $method, $scheme, $host, $port, $path, $full_uri, $query, $post, $body)
     {
         $this->ip = $ip;
         $this->username = $username;
@@ -26,10 +30,10 @@ class Request
         $this->method = strtoupper($method);
 
         $this->scheme =$scheme;
-        $this->hostname = $hostname;
+        $this->host = $host;
         $this->port = $port;
         $this->uri = $path;
-        $this->full_uri = $full_path;
+        $this->full_uri = $full_uri;
         $this->query = $query;
 
         parse_str($this->query, $this->_get);
@@ -46,22 +50,36 @@ class Request
     public static function current()
     {
         if (!isset(static::$current)) {
-            // First, get the URI
+
+            // Get information about the current request
+            $ip = $_SERVER['REMOTE_ADDR'];
+            $username = isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE;
+            $password = isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE;
+            $method = $_SERVER['REQUEST_METHOD'];
+
+            // Figure out if we're on https:
+            if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+                (isset($_SERVER['HTTP_HTTPS']) && $_SERVER['HTTP_HTTPS'] === 'on')) {
+                $scheme = 'https';
+            } else {
+                $scheme = 'http';
+            }
+
+
+            $host = $_SERVER['SERVER_NAME'];
+            $port = $_SERVER['SERVER_PORT'];
+            $path = isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] :
+                                                  (isset($_SERVER['ORIG_PATH_INFO'])? $_SERVER['ORIG_PATH_INFO'] : '');
+
             $full_uri = $_SERVER['REQUEST_URI'];
             $full_uri = strpos($full_uri, '?') !== FALSE? substr($full_uri, 0, strrpos($full_uri, '?')) : $full_uri;
 
-            static::$current = new Request($_SERVER['REMOTE_ADDR'],
-                                           isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE,
-                                           isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE,
-                                           $_SERVER['REQUEST_METHOD'],
-                                           isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'? 'https' : 'http',
-                                           $_SERVER['SERVER_NAME'],
-                                           $_SERVER['SERVER_PORT'],
-                                           isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] : (isset($_SERVER['ORIG_PATH_INFO'])? $_SERVER['ORIG_PATH_INFO'] : ''),
-                                           $full_uri,
-                                           $_SERVER['QUERY_STRING'],
-                                           $_POST,
-                                           file_get_contents('php://input'));
+            $query = $_SERVER['QUERY_STRING'];
+            $post = $_POST;
+            $body = file_get_contents('php://input');
+
+            static::$current = new Request($ip, $username, $password, $method, $scheme, $host, $port, $path,
+                                           $full_uri, $query, $post, $body);
         }
 
         return static::$current;

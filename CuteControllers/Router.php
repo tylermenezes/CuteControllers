@@ -2,10 +2,20 @@
 
 namespace CuteControllers;
 
+// Load these in case there's no SPL class loader
+require_once('Request.php');
+require_once('HttpError.php');
+require_once('Base/Controller.php');
+require_once('Base/Web.php');
+require_once('Base/Rest.php');
+require_once('Base/RestCrud.php');
+
 class Router
 {
     protected static $filters = array();
     protected static $rewrites = array();
+
+    protected static $path = '';
 
     /**
      * Starts routing for a controller folder
@@ -13,41 +23,83 @@ class Router
      */
     public static function start($path)
     {
-        $request = static::apply_filters(Request::current());
-        $request = static::apply_rewrites($request);
+        static::$path = $path;
+        $controller = static::get_responsible_controller();
+        $controller->route();
+    }
 
-        // Now we do the actual routing
-        // First off, if there is no path, there will have to be a controller.
-        if ($request->path === '') {
-            if ($request->file) {
-                $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
-                $controller = static::get_controller($path, $request);
-                if (substr($request->full_uri, -1) !== '/') {
-                    $request->full_uri .= '/';
-                }
-            } else {
-                $request->path = '/index';
-                $controller = static::get_controller($path, $request);
-            }
-        } else {
-            $controller = static::get_controller($path, $request);
-            if ($controller === FALSE) {
-                // Maybe they want to call the index function
-                $request->uri = $request->path . '/' . $request->file_name . '/' . ($request->file_ext? '.' . $request->file_ext : '');
-                if (substr($request->full_uri, -1) !== '/') {
-                    $request->full_uri .= '/';
-                }
-                $controller = static::get_controller($path, $request);
-            }
+
+    public static function get_responsible_controller(Request $request = NULL)
+    {
+        // If no request is specified, assume we're looking at the current one
+        if ($request === NULL) {
+            $request = Request::current();
+
+            // Do the rewrites
+            $request = static::apply_filters(Request::current());
+            $request = static::apply_rewrites($request);
         }
 
-        if ($controller !== FALSE) {
-            $controller->route();
-        } else {
+        $uri_parts = explode('/', $request->uri);
+
+        // Remove empty segments
+        $uri_parts = array_filter($uri_parts, function($part) {
+            return $part !== '';
+        });
+
+        $uri_parts = array_values($uri_parts); //Renumber
+
+        $best_match = NULL;
+        $chain = '';
+
+        // Try to find the best match for a controller
+        $i = 0;
+        foreach ($uri_parts as $part) {
+            $chain .= '/' . $part;
+
+            $best_path = NULL;
+            if (file_exists(static::get_controller_path_from_uri($chain . '/index'))) {
+                $best_path = static::get_controller_path_from_uri($chain . '/index');
+            } else if (file_exists(static::get_controller_path_from_uri($chain))) {
+                $best_path = static::get_controller_path_from_uri($chain);
+            }
+
+            if ($best_path !== NULL) {
+                if (isset($uri_parts[$i+1])) {
+                    $action = $uri_parts[$i+1];
+                } else {
+                    $action = NULL;
+                }
+
+                if (isset($uri_parts[$i+2])) {
+                    $positional_args = array_slice($uri_parts, $i+2);
+                } else {
+                    $positional_args = array();
+                }
+
+                $best_match = static::get_controller($best_path, $request, $action, $positional_args);
+            }
+
+            $i++;
+        }
+
+        if ($best_match === NULL) {
             throw new HttpError(404);
+        } else {
+            return $best_match;
         }
     }
 
+    protected static function get_controller_path_from_uri($uri)
+    {
+        return self::$path . $uri . '.php';
+    }
+
+    /**
+     * Gets the URI of the application front-controller. This would be the location of the front-controller relative
+     * to the webroot, unless you're using htaccess redirects.
+     * @return string URI of the application front-controller
+     */
     public static function get_app_uri()
     {
         $current_request = Request::current();
@@ -62,26 +114,33 @@ class Router
         return $url;
     }
 
-    public static function get_link($to)
+    /**
+     * Gets a link to a resource using the current router configuration.
+     * @param  string  $to       The resource URI to get a link to, relative to the application router
+     * @param  boolean $absolute True to include the protocol, False otherwise
+     * @return string            URL to resource
+     */
+    public static function link($to, $absolute = FALSE)
     {
-        if (strlen($to) == 0) {
-            $to = Request::current()->full_uri . '?' . Request::current()->query;
-        } else if (substr($to, 0, 1) == '?') {
+        if (strlen($to) == 0) { // Current page
+            $to = Request::current()->full_uri;
+            if (Request::current()->query) {
+                $to .= '?' . Request::current()->query;
+            }
+        } else if (substr($to, 0, 1) == '?') { // Current page + query string
             $to = Request::current()->full_uri . $to;
-        } else if (substr($to, 0, 1) === '/') {
-            $to = self::get_app_uri() . $to;
-        } else {
-            if (strpos($to, '://') === FALSE) {
+        } else if (substr($to, 0, 1) === '/') { // Relative to the app root
+            $to = self::get_app_url() . $to;
+        } else if (strpos($to, '://') === FALSE) { // Relative to the current page
                 $url_parts = explode('/', Request::current()->full_uri);
                 array_pop($url_parts);
 
                 $to = implode('/', $url_parts) . '/' . $to;
-            } else {
-                // Fully qualified URL
-            }
+        } else { // Fully qualified URL
+            return $to;
         }
 
-        return $to;
+        return Request::current()->scheme . '://' . Request::current()->host . $to;
     }
 
     public static function redirect($to)
@@ -90,24 +149,14 @@ class Router
         exit;
     }
 
-    /**
-     * Gets a controller associated with a request object
-     * @param  string  $path    Path to controllers folder
-     * @param  Request $request Request object to load the controller for
-     * @return mixed            False if the controller doesn't exist, otherwise the controller
-     */
-    protected static function get_controller($path, Request $request)
+
+    protected static function get_controller($path, $request, $action, $positional_args)
     {
-        $path = $path . $request->path;
-        if (file_exists($path . ".php"))
+        if (file_exists($path))
         {
-            include_once($path . ".php");
-            $controller_name = static::get_class_name_from_file($path . '.php');
-            return new $controller_name($request);
-        } else if (file_exists($path . '/index.php')) {
-            include_once($path . "/index.php");
-            $controller_name = static::get_class_name_from_file($path . '/index.php');
-            return new $controller_name($request);
+            include_once($path);
+            $controller_name = static::get_class_name_from_file($path);
+            return new $controller_name($request, $action, $positional_args);
         } else {
             return FALSE;
         }

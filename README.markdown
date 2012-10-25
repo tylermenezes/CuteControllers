@@ -35,12 +35,12 @@ Quick Start
         namespace MyApp\Controllers\Test;
 
         class Sample extends \CuteControllers\Base\Web {
-            public function index()
+            public function __index()
             {
                 echo "Hello! This is a test!";
             }
 
-            public function demo()
+            public function __demo()
             {
                 echo "In real life, putting echos in a controller is probably a bad idea.";
             }
@@ -136,21 +136,7 @@ on any arbitrary element of the request which you'd like.
 
 `start($path)`
 --------------
-Starts the router. `$path` should be the path to the directory containing your controllers. Here's how the
-router works, in more detail:
-
- 1. Apply all filters (see above)
- 2. Apply all rewrites (see above)
- 3. Check if a matching controller exists in the following order (where `:path` and `:file` are from the request object):
-    1. `$path/:path/:file.php`
-    2. `$path/:path.php`
- 4. If a matching controller was found, call it and we're done:
-    1. If `:file` wasn't in the path (case 2 above), call the `:file` function.
-    2. Otherwise, call the `index` function.
- 5. Otherwise, the page wasn't found:
-    1. Send a 404 error.
-    2. TODO: Traverse up the directories, until both: (a) a directory is found, and (b) it has an _error.php ErrorController.
-    3. If none was found, throw an exception.
+Starts the router. `$path` should be the path to the directory containing your controllers.
 
 Handling Errors
 ===============

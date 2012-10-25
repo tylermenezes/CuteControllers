@@ -6,31 +6,31 @@ class RestCrud extends Rest
 {
     public function route()
     {
-        if ($this->request->file_name === '' && $this->request->method === 'GET') {
-            if ($this->request->request('search') !== NULL && method_exists($this, 'get_search')) {
-                $method = 'get_search';
-            } else if (method_exists($this, 'get_list')) {
-                $method = 'get_list';
+        // If no record is specified, try to use the __search and __list magic methods
+        if ($this->action === NULL && $this->request->method === 'GET') {
+            if ($this->request->request('search') !== NULL &&
+                $this->check_method('__search')) {
+                $this->action = '__search';
+            } else if ($this->check_method('__list')) {
+                $this->action = '__list';
             } else {
-                throw new \CuteControllers\HttpError(404);
+                $this->action = '__' . strtolower($this->request->method);
             }
         } else {
-            $method = strtolower($this->request->method);
+            $id = $this->action;
+            $this->action = '__' . strtolower($this->request->method);
         }
 
-        if (method_exists($this, $method)) {
-            $reflection = new \ReflectionMethod($this, $method);
-            if (!$reflection->isPublic()) {
-                throw new \CuteControllers\HttpError(403);
-            }
-            if ($method == 'get_list') {
-                $this->generate_response($this->$method());
-            } else if ($method == 'get_search') {
-                $this->generate_response($this->$method($this->request->request('search')));
+        if ($this->check_method($this->action)) {
+            if ($this->action === '__list') {
+                $this->generate_response($this->{$this->action}());
+            } else if ($this->action === '__search') {
+                $this->generate_response($this->{$this->action}($this->request->request('search')));
             } else {
-                $this->generate_response($this->$method($this->request->file_name));
+                $this->generate_response($this->{$this->action}($id));
             }
         } else {
+            print $this->action;
             throw new \CuteControllers\HttpError(404);
         }
     }

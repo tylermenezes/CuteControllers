@@ -15,13 +15,13 @@ abstract class CrudFormController extends \CuteControllers\Base\Rest
         $this->form->static_values = $this->static_values;
     }
 
-    public function get_create()
+    public function __get_create()
     {
         $form = $this->form;
         include_once(static::$template);
     }
 
-    public function get_update()
+    public function __get_update()
     {
         $model_class = static::$model;
         $instance = new $model_class($this->request->request($model_class::$primary_key));
@@ -29,7 +29,7 @@ abstract class CrudFormController extends \CuteControllers\Base\Rest
         include_once(static::$template);
     }
 
-    public function post_update()
+    public function __post_update()
     {
         $model_class = static::$model;
         $instance = new $model_class($this->request->request($model_class::$primary_key));
@@ -46,7 +46,7 @@ abstract class CrudFormController extends \CuteControllers\Base\Rest
         $this->redirect('');
     }
 
-    public function post_create()
+    public function __post_create()
     {
         $model_class = static::$model;
         $instance = NULL;
