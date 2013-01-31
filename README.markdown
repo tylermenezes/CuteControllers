@@ -42,6 +42,7 @@ Quick Start
         }
  4. Save it to `[/path/to/your/project]/Includes/MyApp/Controllers/test/sample.php`
  5. Start the router! In your index file, run:
+ 
         \CuteControllers\Route(dirname(__FILE__) . '/Includes/MyApp/Controllers');
  6. Visit it on the web! Here's a list of URLs which should work:
     * `index.php/test/sample/index.html`
