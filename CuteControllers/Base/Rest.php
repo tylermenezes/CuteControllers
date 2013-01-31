@@ -49,7 +49,7 @@ trait Rest
                 break;
             case 'jsonh':
                 header("Content-type: text/html");
-                $json = json_encode($response);
+                $json = json_encode(json_encode($response));
                 echo '<!DOCTYPE html><html><head><title>Cross-Domain Proxy</title></head><body><script type="text/javascript">';
 
                 if ($this->__enable_xdomain) {
