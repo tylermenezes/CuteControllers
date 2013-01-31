@@ -2,21 +2,12 @@
 
 namespace CuteControllers\Base;
 
-abstract class Controller
+trait Controller
 {
-    protected $request;
-    protected $action;
-    protected $positional_args;
+    public $routing_information;
+    public $request;
 
-    public function __construct(\CuteControllers\Request $request, $action, $positional_args)
-    {
-        $this->request = $request;
-        $this->action = $action;
-        $this->positional_args = $positional_args;
-        $this->before();
-    }
-
-    public function check_method($method_name, $num_params = NULL)
+    private function __cc_check_method($method_name, $num_params = NULL, $check_public = TRUE)
     {
         if (!method_exists($this, $method_name)) {
             return false;
@@ -24,13 +15,27 @@ abstract class Controller
 
         $reflection = new \ReflectionMethod($this, $method_name);
         if ($num_params === NULL) {
-            return $reflection->isPublic();
+            return $reflection->isPublic() || !$check_public;
         } else {
-            return $reflection->getNumberOfRequiredParameters() === $num_params && $reflection->isPublic();
+            return $reflection->getNumberOfRequiredParameters() === $num_params &&
+                    ($reflection->isPublic() || !$check_public);
         }
     }
 
-    public function before(){}
+    public function __cc_route()
+    {
+        if ($this->__cc_check_method('__before', NULL, FALSE)) {
+            $this->__before();
+        }
+
+        $this->__route();
+
+        if ($this->__cc_check_method('__before', NULL, FALSE)) {
+            $this->__after();
+        }
+    }
+
+    abstract protected function __route();
 
     protected function require_get()
     {
@@ -66,6 +71,4 @@ abstract class Controller
     {
         \CuteControllers\Router::redirect($to);
     }
-
-    abstract public function route();
 }

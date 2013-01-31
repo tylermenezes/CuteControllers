@@ -2,35 +2,39 @@
 
 namespace CuteControllers\Base;
 
-class RestCrud extends Rest
+trait RestCrud
 {
-    public function route()
+    use Rest;
+
+    public function __route()
     {
-        // If no record is specified, try to use the __search and __list magic methods
-        if ($this->action === NULL && $this->request->method === 'GET') {
-            if ($this->request->request('search') !== NULL &&
-                $this->check_method('__search')) {
-                $this->action = '__search';
-            } else if ($this->check_method('__list')) {
-                $this->action = '__list';
+        $url_params = explode('/', $this->routing_information->unmatched_path);
+        $action = array_shift($url_params);
+
+        if (!$action && $this->request->method === 'GET') {
+            if ($this->request->param('search') !== NULL &&
+                $this->__cc_check_method('__search')) {
+                $action = '__search';
+            } else if ($this->__cc_check_method('__list')) {
+                $action = '__list';
             } else {
-                $this->action = '__' . strtolower($this->request->method);
+                $action = '__' . strtolower($this->request->method);
             }
         } else {
-            $id = $this->action;
-            $this->action = '__' . strtolower($this->request->method);
+            $id = $action;
+            $action = '__' . strtolower($this->request->method);
         }
 
-        if ($this->check_method($this->action)) {
-            if ($this->action === '__list') {
-                $this->generate_response($this->{$this->action}());
-            } else if ($this->action === '__search') {
-                $this->generate_response($this->{$this->action}($this->request->request('search')));
+        if ($this->__cc_check_method($action)) {
+            if ($action === '__list') {
+                $this->generate_response($this->{$action}());
+            } else if ($action === '__search') {
+                $this->generate_response($this->{$action}($this->request->param('search')));
             } else {
-                $this->generate_response($this->{$this->action}($id));
+                $this->generate_response($this->{$action}($id));
             }
         } else {
-            print $this->action;
+            print $action;
             throw new \CuteControllers\HttpError(404);
         }
     }

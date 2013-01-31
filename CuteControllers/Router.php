@@ -2,9 +2,10 @@
 
 namespace CuteControllers;
 
-// Load these in case there's no SPL class loader
+// For the .001% of people who are on PHP 5.4+ and not using an SPL Class Loader, load the files ourselves:
 require_once('Request.php');
 require_once('HttpError.php');
+require_once('ControllerFileTrie.php');
 require_once('Base/Controller.php');
 require_once('Base/Web.php');
 require_once('Base/Rest.php');
@@ -12,221 +13,20 @@ require_once('Base/RestCrud.php');
 
 class Router
 {
-    protected static $filters = array();
-    protected static $rewrites = array();
-
-    protected static $path = '';
-
+    protected static $instance = NULL;
     /**
-     * Starts routing for a controller folder
-     * @param  string $path Path to the controllers folder
+     * Begins routing
+     * @param  string  $controllers_directory The directory to load controllers from
+     * @param  Request $request               The request to route for
      */
-    public static function start($path)
+    public static function start($controllers_directory = NULL, $request = NULL)
     {
-        static::$path = $path;
-        $controller = static::get_responsible_controller();
-        $controller->route();
-    }
-
-
-    public static function get_responsible_controller(Request $request = NULL)
-    {
-        // If no request is specified, assume we're looking at the current one
-        if ($request === NULL) {
-            $request = Request::current();
-
-            // Do the rewrites
-            $request = static::apply_filters(Request::current());
-            $request = static::apply_rewrites($request);
+        if (static::$instance === NULL) {
+            static::$instance = new static();
         }
 
-        $uri_parts = explode('/', $request->uri);
-
-        // Remove empty segments
-        $uri_parts = array_filter($uri_parts, function($part) {
-            return $part !== '';
-        });
-
-        $uri_parts = array_values($uri_parts); //Renumber
-
-        $best_match = NULL;
-        $chain = '';
-
-        // Try to find the best match for a controller
-        $i = 0;
-        foreach ($uri_parts as $part) {
-            $chain .= '/' . $part;
-
-            $best_path = NULL;
-            if (file_exists(static::get_controller_path_from_uri($chain . '/index'))) {
-                $best_path = static::get_controller_path_from_uri($chain . '/index');
-            } else if (file_exists(static::get_controller_path_from_uri($chain))) {
-                $best_path = static::get_controller_path_from_uri($chain);
-            }
-
-            if ($best_path !== NULL) {
-                if (isset($uri_parts[$i+1])) {
-                    $action = $uri_parts[$i+1];
-                } else {
-                    $action = NULL;
-                }
-
-                if (isset($uri_parts[$i+2])) {
-                    $positional_args = array_slice($uri_parts, $i+2);
-                } else {
-                    $positional_args = array();
-                }
-
-                $best_match = static::get_controller($best_path, $request, $action, $positional_args);
-            }
-
-            $i++;
-        }
-
-        if ($best_match === NULL) {
-            throw new HttpError(404);
-        } else {
-            return $best_match;
-        }
-    }
-
-    protected static function get_controller_path_from_uri($uri)
-    {
-        return self::$path . $uri . '.php';
-    }
-
-    /**
-     * Gets the URI of the application front-controller. This would be the location of the front-controller relative
-     * to the webroot, unless you're using htaccess redirects.
-     * @return string URI of the application front-controller
-     */
-    public static function get_app_uri()
-    {
-        $current_request = Request::current();
-        $uri = $current_request->uri;
-        if (substr($uri, -1) === '/' && substr($current_request->full_uri, -1) !== '/') {
-            $uri = substr($uri, 0, strlen($uri) - 1);
-        }
-        $url = substr($current_request->full_uri, 0, strlen($current_request->full_uri) - strlen($uri));
-        if (substr($url, -1) === '/') {
-            $url = substr($url, 0, strlen($url) - 1);
-        }
-        return $url;
-    }
-
-    /**
-     * Gets a link to a resource using the current router configuration.
-     * @param  string  $to       The resource URI to get a link to, relative to the application router
-     * @param  boolean $absolute True to include the protocol, False otherwise
-     * @return string            URL to resource
-     */
-    public static function link($to, $absolute = FALSE)
-    {
-        if (strlen($to) == 0) { // Current page
-            $to = Request::current()->full_uri;
-            if (Request::current()->query) {
-                $to .= '?' . Request::current()->query;
-            }
-        } else if (substr($to, 0, 1) == '?') { // Current page + query string
-            $to = Request::current()->full_uri . $to;
-        } else if (substr($to, 0, 1) === '/') { // Relative to the app root
-            $to = self::get_app_url() . $to;
-        } else if (strpos($to, '://') === FALSE) { // Relative to the current page
-                $url_parts = explode('/', Request::current()->full_uri);
-                array_pop($url_parts);
-
-                $to = implode('/', $url_parts) . '/' . $to;
-        } else { // Fully qualified URL
-            return $to;
-        }
-
-        return Request::current()->scheme . '://' . Request::current()->host . $to;
-    }
-
-    public static function redirect($to)
-    {
-        header('Location: ' . self::get_link($to));
-        exit;
-    }
-
-
-    protected static function get_controller($path, $request, $action, $positional_args)
-    {
-        if (file_exists($path))
-        {
-            include_once($path);
-            $controller_name = static::get_class_name_from_file($path);
-            return new $controller_name($request, $action, $positional_args);
-        } else {
-            return FALSE;
-        }
-    }
-
-    /**
-     * Gets the fully-namespaced name of the first class in the file
-     * @param  string $file File path
-     * @return string       Fully-namespaced class name (e.g. Namespace\ClassName)
-     */
-    protected static function get_class_name_from_file($file)
-    {
-        $fp = fopen($file, 'r');
-        $class = $namespace = $buffer = '';
-        $i = 0;
-        while (!$class) {
-            if (feof($fp)) break;
-
-            $buffer .= fread($fp, 512);
-            $tokens = token_get_all($buffer);
-
-            if (strpos($buffer, '{') === false) continue;
-
-            for (;$i<count($tokens);$i++) {
-                if ($tokens[$i][0] === T_NAMESPACE) {
-                    for ($j=$i+1;$j<count($tokens); $j++) {
-                        if ($tokens[$j][0] === T_STRING) {
-                             $namespace .= '\\'.$tokens[$j][1];
-                        } else if ($tokens[$j] === '{' || $tokens[$j] === ';') {
-                             break;
-                        }
-                    }
-                }
-
-                if ($tokens[$i][0] === T_CLASS) {
-                    for ($j=$i+1;$j<count($tokens);$j++) {
-                        if ($tokens[$j] === '{') {
-                            $class = $tokens[$i+2][1];
-                        }
-                    }
-                }
-            }
-        }
-
-        return $namespace . '\\' . $class;
-    }
-
-
-    /**
-     * Registers a filter
-     * @param  function($request) $lambda Anonymous function to call, taking and returning a Request object
-     */
-    public static function filter($lambda)
-    {
-        static::$filters[] = $lambda;
-    }
-
-    /**
-     * Applies all registered filters
-     * @param  Request $request Request to which to apply filters
-     * @return Request          Result Request
-     */
-    protected static function apply_filters(Request $request)
-    {
-        foreach (static::$filters as $filter)
-        {
-            $request = $filter($request);
-        }
-
-        return $request;
+        static::$instance->controllers_directory = $controllers_directory;
+        static::$instance->route($request);
     }
 
     /**
@@ -236,7 +36,76 @@ class Router
      */
     public static function rewrite($from, $to)
     {
-        static::$rewrites[] = array($from, $to);
+        if (static::$instance === NULL) {
+            static::$instance = new static();
+        }
+
+        static::$instance->add_rewrite($from, $to);
+    }
+
+
+    protected $rewrites = [];
+    protected $controllers_directory = NULL;
+
+    public function __construct($controllers_directory = NULL)
+    {
+        if ($controllers_directory !== NULL) {
+            $this->controllers_directory = $controllers_directory;
+        }
+    }
+
+    /**
+     * Begins routing
+     * @param  Request $request The request to route for
+     */
+    public function route($request = NULL)
+    {
+        // If the path to the controllers directory wasn't set, throw an exception
+        if ($this->controllers_directory === NULL) {
+            throw new \BadFunctionCallException('Must set a controllers directory before calling start.');
+        }
+
+        if ($request === NULL) {
+            $request = Request::current();
+        }
+        $responsible_controller = $this->get_responsible_controller($request);
+        $responsible_controller->__cc_route();
+    }
+
+    /**
+     * Gets the controller responsible for a request
+     * @param  Request $request The request to find a controller for
+     * @return object           Controller
+     */
+    public function get_responsible_controller($request = NULL)
+    {
+        if ($request === NULL) {
+            $request = Request::current();
+        }
+
+        // Find the controller which should handle this
+        $trie = new ControllerFileTrie($request->path);
+        $best_match = $trie->find_closest_filesystem_match($this->controllers_directory);
+
+        if ($best_match === NULL) {
+            throw new HttpError(404);
+        }
+
+        $controller = static::get_class_from_path($best_match->path);
+        $controller->routing_information = $best_match;
+        $controller->request = $request;
+
+        return $controller;
+    }
+
+    /**
+     * Registers a rewrite rule
+     * @param  string $from Regex to match on
+     * @param  string $to   Replacement (can include capture group references)
+     */
+    public function add_rewrite($from, $to)
+    {
+        $this->rewrites[] = ['from' => $from, 'to' => $to];
     }
 
     /**
@@ -244,16 +113,124 @@ class Router
      * @param  Request $request Request to which to apply rewrites
      * @return Request          Result Request
      */
-    protected static function apply_rewrites(Request $request)
+    protected function apply_rewrites(Request $request)
     {
-        foreach (static::$rewrites as $rewrite)
+        foreach ($this->rewrites as $rewrite)
         {
-            $from = $rewrite[0];
-            $to = $rewrite[1];
+            $from = $rewrite['from'];
+            $to = $rewrite['to'];
 
             $request->uri = preg_replace('/^' + str_replace('/', '\\/', $from) + '$/i', $to, $request->uri);
         }
 
         return $request;
+    }
+
+    /**
+     * Gets an instance of a class from its path
+     * @param  string $path Path to the class
+     * @return object       Instance of the object
+     */
+    protected static function get_class_from_path($path)
+    {
+        if (file_exists($path)) {
+            try {
+                include_once($path);
+            } catch (\Exception $ex) {
+                 throw new \InvalidArgumentException($path . ' did not exist.');
+            }
+
+                $controller_info = static::get_class_info_from_path($path);
+                $controller_name = implode('\\', [$controller_info->namespace, $controller_info->class]);
+
+                return new $controller_name();
+        } else {
+            throw new \InvalidArgumentException($path . ' did not exist.');
+        }
+    }
+
+    /**
+     * Gets the namespace and class name of a class from its file
+     * @param  string $path Path to the file
+     * @return object       Object containing details of the object in "namespace" and "class" properties.
+     */
+    protected static function get_class_info_from_path($path)
+    {
+        // This function reads in a file, uses PHP to lex it, and then processes those tokens in a very naive way. As
+        // soon as it finds a class start definition, it closes the file, so there's not much unnecessary reading going
+        // on, which is probably a silly optimization.
+        //
+        // Because it only parses up until the first class token, it's not suited for parsing anything after the first
+        // class token. (A side effect of this is that it only returns the FIRST class in the file, not the last as one
+        // might expect.) This method returns everything you need to know to create a reflector to get additional
+        // information, though.
+        //
+        // Because namespaces cascade down into the class, we can just concat them until we hit a class token. This
+        // doesn't deal with files of the form:
+        //
+        // <?php
+        //     namespace red\herring { }
+        //     namespace xyzzy {
+        //         class plugh {}
+        //     }
+        //
+        // -- the function would return namespace => red\herring\xyz
+        //
+        // But this really shouldn't be an issue for this sort of thing. The only non-hacky way to fix this is to build
+        // an AST for the file, which is fairly overkill. (You might be thinking: "why not just pop off a stack on }?".
+        // I did it this way at first, but realized it didn't actually solve anything, since anyone who put a function
+        // in the namespace would cause the namespace stack to get double-popped. You could count the number of { not
+        // associated with a T_NAMESPACE, and subtract to 0 before popping, but that gets pretty messy.)
+        //
+        // tl;dr: This function is magic.
+
+        $fp = fopen($path, 'r');
+        $class = $namespace = $buffer = NULL;
+        $i = 0;
+
+        while ($class === NULL) { // The namespace of the class can only be changed before the class is declared.
+
+            // If our file pointer is at EOF, this file just isn't classy. Throw an exception, because what kind of
+            // person asks for class information about a file without a class?!
+            if (feof($fp)) {
+                throw new \BadFunctionCallException('File ' . $path . ' did not contain a class');
+            }
+
+
+            $buffer .= fread($fp, 512); // Read some bytes into the buffer
+            $tokens = token_get_all($buffer); // Turn the buffer into tokens
+
+
+            // If we don't see a begin-bracket, we definitely haven't gotten to the class, and we probably haven't
+            // gotten to the end of the namespace declaration. Go forward and read some more bytes into the buffer.
+            if (strpos($buffer, '{') === false) {
+                continue;
+            }
+
+            for (/* $i is global */; $i < count($tokens); $i++) {
+                if ($tokens[$i][0] === T_NAMESPACE) { // If this is a namespace token, keep going
+                    for ($j = $i+1; $j < count($tokens); $j++) { // If we're out of tokens, nothing to see here.
+                        if ($tokens[$j][0] === T_STRING) { // If the token is a string, we're looking at a namespace!
+                             $namespace .= '\\' . $tokens[$j][1]; // Add on to the namespace
+                        } else if ($tokens[$j] === '{' || $tokens[$j] === ';') { // Namespace change over!
+                             break;
+                        }
+                    }
+                }
+
+                if ($tokens[$i][0] === T_CLASS) { // We've finally reached the beginning of a class def
+                    for ($j=$i+1;$j<count($tokens);$j++) {
+                        if ($tokens[$j] === '{') {
+                            $class = $tokens[$i+2][1];
+                        }
+                    }
+                }
+            }
+        }
+
+        return (object)[
+            'namespace' => $namespace,
+            'class' => $class
+        ];
     }
 }

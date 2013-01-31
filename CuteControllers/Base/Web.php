@@ -2,18 +2,23 @@
 
 namespace CuteControllers\Base;
 
-class Web extends Controller
+trait Web
 {
-    public function route()
+    use Controller;
+
+    public function __route()
     {
-        if ($this->action === NULL) {
-            $this->action = 'index';
+        $url_params = explode('/', $this->routing_information->unmatched_path);
+        $action = array_shift($url_params);
+
+        if (!$action) {
+            $action = 'index';
         }
 
-        $this->action = '__' . $this->action;
+        $action = '__' . $action;
 
-        if ($this->check_method($this->action, count($this->positional_args))) {
-            echo call_user_func_array(array($this, $this->action), $this->positional_args);
+        if ($this->__cc_check_method($action, count($url_params))) {
+            echo call_user_func_array(array($this, $action), $url_params);
         } else {
             throw new \CuteControllers\HttpError(404);
         }

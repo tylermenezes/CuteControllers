@@ -8,33 +8,33 @@ require_once('HttpError.php');
 
 class Request
 {
-    public $ip;
-    public $username;
-    public $password;
     public $method;
     public $scheme;
+    public $username;
+    public $password;
     public $host;
     public $port;
-    public $uri;
-    public $full_uri;
+    public $path;
     public $query;
     public $body;
+    public $user_ip;
+
     protected $_get;
     protected $_post;
 
-    public function __construct($ip, $username, $password, $method, $scheme, $host, $port, $path, $full_uri, $query, $post, $body)
+    public function __construct($method, $scheme, $username, $password, $host, $port, $path, $query, $user_ip, $post,
+                                $body)
     {
-        $this->ip = $ip;
+        $this->method = $method;
+        $this->scheme = $scheme;
         $this->username = $username;
         $this->password = $password;
-        $this->method = strtoupper($method);
-
-        $this->scheme =$scheme;
         $this->host = $host;
         $this->port = $port;
-        $this->uri = $path;
-        $this->full_uri = $full_uri;
+        $this->path = $path;
         $this->query = $query;
+
+        $this->user_ip = $user_ip;
 
         parse_str($this->query, $this->_get);
         $this->_post = $post;
@@ -42,47 +42,67 @@ class Request
         $this->body = $body;
     }
 
-    private static $current = null;
-
     /**
      * Gets the request which represents the current HTTP session
      */
-    public static function current()
+    public static function Current()
     {
-        if (!isset(static::$current)) {
-
-            // Get information about the current request
-            $ip = $_SERVER['REMOTE_ADDR'];
-            $username = isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE;
-            $password = isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE;
-            $method = $_SERVER['REQUEST_METHOD'];
-
-            // Figure out if we're on https:
-            if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
-                (isset($_SERVER['HTTP_HTTPS']) && $_SERVER['HTTP_HTTPS'] === 'on')) {
-                $scheme = 'https';
-            } else {
-                $scheme = 'http';
-            }
-
-
-            $host = $_SERVER['SERVER_NAME'];
-            $port = $_SERVER['SERVER_PORT'];
-            $path = isset($_SERVER['PATH_INFO'])? $_SERVER['PATH_INFO'] :
-                                                  (isset($_SERVER['ORIG_PATH_INFO'])? $_SERVER['ORIG_PATH_INFO'] : '');
-
-            $full_uri = $_SERVER['REQUEST_URI'];
-            $full_uri = strpos($full_uri, '?') !== FALSE? substr($full_uri, 0, strrpos($full_uri, '?')) : $full_uri;
-
-            $query = $_SERVER['QUERY_STRING'];
-            $post = $_POST;
-            $body = file_get_contents('php://input');
-
-            static::$current = new Request($ip, $username, $password, $method, $scheme, $host, $port, $path,
-                                           $full_uri, $query, $post, $body);
+        if (!isset($_SERVER['REMOTE_ADDR'])) {
+            throw new \BadFunctionCallException('Cannot get request information in non-server invocation.');
         }
 
-        return static::$current;
+        // Get information about the current request
+        $user_ip = $_SERVER['REMOTE_ADDR'];
+
+        $method = isset($_SERVER['REQUEST_METHOD'])? $_SERVER['REQUEST_METHOD'] : 'GET';
+        // Figure out if we're on https:
+        if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+            (isset($_SERVER['HTTP_HTTPS']) && $_SERVER['HTTP_HTTPS'] === 'on')) {
+            $scheme = 'https';
+        } else {
+            $scheme = 'http';
+        }
+
+        $username = isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE;
+        $password = isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE;
+        $host = $_SERVER['SERVER_NAME'];
+        $port = isset($_SERVER['SERVER_PORT'])? $_SERVER['SERVER_PORT'] : ($scheme === 'https'? 443 : 80);
+        $path = $_SERVER['REQUEST_URI'];
+        $query = (isset($_SERVER['QUERY_STRING']) && strlen($_SERVER['QUERY_STRING']) > 0)? $_SERVER['QUERY_STRING'] :
+                                                                                            NULL;
+
+        if ($query !== NULL) {
+            $path = substr($path, 0, strlen($path) - (strlen($query) + 1));
+        }
+
+        $post = $_POST;
+        $body = file_get_contents('php://input');
+
+        return new self($method, $scheme, $username, $password, $host, $port, $path, $query, $user_ip,
+                                    $post, $body);
+    }
+
+    /**
+     * Creates a request instance from a URL
+     * @param string $url       The URL to create the request instance from
+     * @param string $method    Optional, the HTTP verb to create the request as, defaults to GET
+     * @param string $user_ip   Optional, the user's IP
+     * @param array  $post      Optional, POST data
+     * @param string $body      Optional, POST body
+     */
+    public static function FromUrl($url, $method = 'GET', $user_ip = NULL, $post = NULL, $body = NULL)
+    {
+        $parts = parse_url($url);
+
+        $scheme = $parts['scheme'];
+        $host = $parts['host'];
+        $port = isset($parts['port']) ? $parts['port'] : ($scheme === 'https' ? 443 : 80);
+        $username = isset($parts['user']) ? $parts['user'] : NULL;
+        $password = isset($parts['pass']) ? $parts['pass'] : NULL;
+        $path = isset($parts['path']) ? $parts['path'] : '/';
+        $query = isset($parts['query']) ? $parts['query'] : NULL;
+
+        return new self($method, $scheme, $username, $password, $host, $port, $path, $query, $user_ip, $post, $body);
     }
 
     /**
@@ -110,7 +130,7 @@ class Request
      * @param  string $name Name of the paramater to get
      * @return mixed        Value of the paramater
      */
-    public function request($name)
+    public function param($name)
     {
         return ($this->get($name) !== NULL)? $this->get($name) : $this->post($name);
     }
@@ -124,7 +144,7 @@ class Request
     {
         switch ($key) {
             case 'file':
-                $pathparts = explode('/', $this->uri);
+                $pathparts = explode('/', $this->path);
                 return array_pop($pathparts);
                 break;
             case 'file_name':
@@ -133,13 +153,8 @@ class Request
             case 'file_ext':
                 return strrpos($this->file, '.') !== FALSE? substr($this->file, strrpos($this->file, '.') + 1) : FALSE;
                 break;
-            case 'path':
-                $pathparts = explode('/', $this->uri);
-                array_pop($pathparts);
-                return implode('/', $pathparts);
-                break;
             case 'segments':
-                return explode('/', $this->uri);
+                return explode('/', $this->path);
                 break;
         }
     }
