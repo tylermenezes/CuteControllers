@@ -22,7 +22,24 @@ trait RestCrud
             }
         } else {
             $id = $action;
-            $action = '__' . strtolower($this->request->method);
+            switch ($this->request->method) {
+                case 'GET':
+                    $action = '__read';
+                    break;
+                case 'POST':
+                    $action = '__create';
+                    break;
+                case 'PUT':
+                case 'PATCH':
+                    $action = '__update';
+                    break;
+                case 'DELETE';
+                    $action = '__delete';
+                    break;
+                default:
+                    $action = '__' . strtolower($this->request->method);
+                    break;
+            }
         }
 
         if ($this->__cc_check_method($action)) {

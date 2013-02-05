@@ -9,6 +9,7 @@ trait Rest
     {
         $url_params = explode('/', $this->routing_information->unmatched_path);
         $action = array_shift($url_params);
+        $action_orig = $action;
 
         if (!$action) {
             $action = 'index';
@@ -22,8 +23,8 @@ trait Rest
 
         // Check if the __index method exists, taking the URL params, plus the action param
         } else if ($this->__cc_check_method('__' . strtolower($this->request->method) . '_index', count($url_params) + 1)) {
-            $this->generate_response(call_user_func_array(array($this, '__' . strtolower($this->request->method) . '_index'), array_merge([$action], $url_params)));
-        
+            $this->generate_response(call_user_func_array(array($this, '__' . strtolower($this->request->method) . '_index'), array_merge([$action_orig], $url_params)));
+
         // Method not found!
         } else {
             throw new \CuteControllers\HttpError(404);
