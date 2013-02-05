@@ -17,8 +17,15 @@ trait Web
 
         $action = '__' . $action;
 
+        // First, check if the action exists, taking count($url_params) or less paramaters
         if ($this->__cc_check_method($action, count($url_params))) {
-            echo call_user_func_array(array($this, $action), $url_params);
+            $this->generate_response(call_user_func_array(array($this, $action), $url_params));
+
+        // Check if the __index method exists, taking the URL params, plus the action param
+        } else if ($this->__cc_check_method('__index', count($url_params) + 1)) {
+            $this->generate_response(call_user_func_array(array($this, '__index'), array_merge([$action], $url_params)));
+        
+        // Method not found!
         } else {
             throw new \CuteControllers\HttpError(404);
         }
