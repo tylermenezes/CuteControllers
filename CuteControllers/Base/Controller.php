@@ -30,7 +30,7 @@ trait Controller
 
         $this->__route();
 
-        if ($this->__cc_check_method('__before', NULL, FALSE)) {
+        if ($this->__cc_check_method('__after', NULL, FALSE)) {
             $this->__after();
         }
     }
