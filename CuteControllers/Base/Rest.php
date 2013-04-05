@@ -61,7 +61,7 @@ trait Rest
                 echo '<!DOCTYPE html><html><head><title>Cross-Domain Proxy</title></head><body><script type="text/javascript">';
 
                 if ($this->__enable_xdomain) {
-                    echo 'parent.postMessage($json, "' . $this->request->param('domain') . '");';
+                    echo 'parent.postMessage(' . $json . ', "' . $this->request->param('domain') . '");';
                 } else {
                     echo 'alert("Cross-domain access is not allowed.");';
                 }
