@@ -106,19 +106,19 @@ class ControllerFileTrie
         // levels of the route, so we'll check the current leaves.
 
         // First, check for a file which matches:
-        if (is_file(implode('/', [$current_path, $current_node['left']['name'] . '.php']))) {
+        if (is_file(implode('/', ['', $current_path, $current_node['left']['name'] . '.php']))) {
             // Found a file with that name!
             return (object)[
-                'path' => implode('/', [$current_path, $current_node['left']['name'] . '.php']),
+                'path' => implode('/', ['', $current_path, $current_node['left']['name'] . '.php']),
                 'matched_path' => implode('/', array_merge($built_path, [$current_node['left']['name'] . '.php'])),
                 'unmatched_path' => self::get_unmatched_path($current_node['left']['value'])
             ];
 
         // Check for an index.php file at the current directory level
-        } else if(is_file(implode('/', [$current_path, 'index.php']))) {
+        } else if(is_file(implode('/', ['', $current_path, 'index.php']))) {
             // Found an index.php at the current directory
             return (object)[
-                'path' => implode('/', [$current_path, 'index.php']),
+                'path' => implode('/', ['', $current_path, 'index.php']),
                 'matched_path' => implode('/', array_merge($built_path, ['index.php'])),
                 'unmatched_path' => self::get_unmatched_path($current_node)
             ];

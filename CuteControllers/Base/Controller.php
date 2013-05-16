@@ -17,7 +17,7 @@ trait Controller
         if ($num_params === NULL) {
             return $reflection->isPublic() || !$check_public;
         } else {
-            return $reflection->getNumberOfRequiredParameters() === $num_params &&
+            return $reflection->getNumberOfRequiredParameters() <= $num_params &&
                     ($reflection->isPublic() || !$check_public);
         }
     }

@@ -8,7 +8,7 @@ trait Rest
     public function __route()
     {
         $url_params = explode('/', $this->routing_information->unmatched_path);
-        $action = array_shift($url_params);
+        $action = str_replace('-', '_', array_shift($url_params));
         $action_orig = $action;
 
         if (!$action) {
