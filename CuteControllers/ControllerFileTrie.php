@@ -86,11 +86,10 @@ class ControllerFileTrie
 
         // If there's a directory which matches this node, visit that first:
         if ($current_node['left']['value'] !== NULL &&
-            is_dir(implode('/', [$current_path, $current_node['left']['name']]))) {
+            is_dir(implode('/', ['', $current_path, $current_node['left']['name']]))) {
 
             // Add the directory onto the state of the search path
             $new_built_path = array_merge($built_path, [$current_node['left']['name']]);
-
 
             // Get the value of the match
             $ret = $this->get_closest_match($base_path, $current_node['left']['value'], $new_built_path);
