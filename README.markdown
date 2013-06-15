@@ -52,11 +52,11 @@ A quick and simple way to build routers in PHP.
 
         \CuteControllers\Router::start(dirname(__FILE__) . '/Includes/MyApp/Controllers');
  6. Visit it on the web! Here's a list of URLs which should work:
-    * `index.php/test/sample/index.html`
-    * `index.php/test/sample.html` (Same as above - uses the default method "index" in the controller)
-    * `index.php/test/sample/index` and `index.php/test/sample` (The default extension is HMTL)
-    * `index.php/test/sample/demo.xml`
-    * `index.php/test/sample/demo.json`
+    * `/test/sample/index.html`
+    * `/test/sample.html` (Same as above - uses the default method "index" in the controller)
+    * `/test/sample/index` and `index.php/test/sample` (The default extension is HMTL)
+    * `/test/sample/demo.xml`
+    * `/test/sample/demo.json`
 
 # Controllers
 
