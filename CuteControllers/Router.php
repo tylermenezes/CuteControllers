@@ -6,10 +6,7 @@ namespace CuteControllers;
 require_once('Request.php');
 require_once('HttpError.php');
 require_once('ControllerFileTrie.php');
-require_once('Base/Controller.php');
-require_once('Base/Web.php');
-require_once('Base/Rest.php');
-require_once('Base/RestCrud.php');
+require_once('Controller.php');
 
 class Router
 {
@@ -43,6 +40,57 @@ class Router
         static::$instance->add_rewrite($from, $to);
     }
 
+    /**
+     * Gets an absolute URL given a HTML-style link
+     * @param  string $uri HTML-style link
+     * @return string      Absolute URL
+     */
+    public static function link($uri)
+    {
+        $request = Request::current();
+        if (substr($uri, 0, 2) === '//') { // Is it a protocol-relative URL?
+            return $request->scheme . ':' . $uri;
+        } else if (strpos($uri, '://') !== false) { // Is it a fully-qualified URL already?
+            return $uri;
+        } else if (substr($uri, 0, 1) === '/') { // Is it relative to the domain?
+            return $request->scheme . '://' . $request->host . $uri;
+        } else if (substr($uri, 0, 1) === '?') { // Is it a query-string?
+            return $request->scheme . '://' . $request->host . $request->path . $uri;
+        } else { // It's relative to the current page
+
+            // Remove the file component of the path
+            $path_parts = explode('/', $request->path);
+            array_pop($path_parts);
+            $path = implode('/', $request->path);
+
+            return $request->scheme . '://' . $request->host . $path . $uri;
+        }
+    }
+
+    /**
+     * Redirects the user to a new page and terminates execution
+     * @param  string  $uri         Page to redirect to
+     * @param  [int]   $status_code Status code, defaults to 302
+     */
+    public static function redirect($uri, $status_code = 302)
+    {
+        $codes = array(
+            300 => "Multiple Choices",
+            301 => "Moved Permanently",
+            302 => "Found",
+            303 => "See Other",
+            307 => "Temporary Redirect"
+        );
+
+        if (!array_key_exists($status_code, $codes)) {
+            throw new \InvalidArgumentException('Status code must be a 3xx code for redirects.');
+        }
+
+        header("HTTP/1.1 " . $status_code . ' ' . $codes[$status_code]);
+        header("Location: " . self::link($uri));
+        exit;
+    }
+
 
     protected $rewrites = [];
     protected $controllers_directory = NULL;
@@ -69,7 +117,7 @@ class Router
             $request = Request::current();
         }
         $responsible_controller = $this->get_responsible_controller($request);
-        $responsible_controller->__cc_route();
+        $responsible_controller->cc_route();
     }
 
     /**

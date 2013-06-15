@@ -94,49 +94,49 @@ class RouterTest extends PHPUnit_Framework_TestCase
         ];
 
         try {
-            unlink('running_test/folder/file/index.php');
+            unlink(dirname(__FILE__) . '/running_test/folder/file/index.php');
         } catch (\Exception $ex) {}
         try {
-            rmdir('running_test/folder/file');
+            rmdir(dirname(__FILE__) . '/running_test/folder/file');
         } catch (\Exception $ex) {}
         try {
-            unlink('running_test/folder/file.php');
+            unlink(dirname(__FILE__) . '/running_test/folder/file.php');
         } catch (\Exception $ex) {}
         try {
-            unlink('running_test/folder/index.php');
+            unlink(dirname(__FILE__) . '/running_test/folder/index.php');
         } catch (\Exception $ex) {}
         try {
-            rmdir('running_test/folder');
+            rmdir(dirname(__FILE__) . '/running_test/folder');
         } catch (\Exception $ex) {}
         try {
-            unlink('running_test/folder.php');
+            unlink(dirname(__FILE__) . '/running_test/folder.php');
         } catch (\Exception $ex) {}
         try {
-            rmdir('running_test');
+            rmdir(dirname(__FILE__) . '/running_test');
         } catch (\Exception $ex) {}
 
-        mkdir('running_test');
-        mkdir('running_test/folder');
-        mkdir('running_test/folder/file');
-        file_put_contents('running_test/folder/file/index.php', '<?php class w { public $whoami = "w"; }');
-        file_put_contents('running_test/folder/file.php', '<?php class x { public $whoami = "x"; }');
-        file_put_contents('running_test/folder/index.php', '<?php class y { public $whoami = "y"; }');
-        file_put_contents('running_test/folder.php', '<?php class z { public $whoami = "z"; }');
-        $router = new \CuteControllers\Router('running_test');
+        mkdir(dirname(__FILE__) . '/running_test');
+        mkdir(dirname(__FILE__) . '/running_test/folder');
+        mkdir(dirname(__FILE__) . '/running_test/folder/file');
+        file_put_contents(dirname(__FILE__) . '/running_test/folder/file/index.php', '<?php class w { public $whoami = "w"; }');
+        file_put_contents(dirname(__FILE__) . '/running_test/folder/file.php', '<?php class x { public $whoami = "x"; }');
+        file_put_contents(dirname(__FILE__) . '/running_test/folder/index.php', '<?php class y { public $whoami = "y"; }');
+        file_put_contents(dirname(__FILE__) . '/running_test/folder.php', '<?php class z { public $whoami = "z"; }');
+        $router = new \CuteControllers\Router(dirname(__FILE__) . '/running_test');
 
         $this->assertEquals('w', $router->get_responsible_controller()->whoami, 'Failed routing to x/y/index.php');
-        unlink('running_test/folder/file/index.php');
+        unlink(dirname(__FILE__) . '/running_test/folder/file/index.php');
         $this->assertEquals('x', $router->get_responsible_controller()->whoami, 'Failed routing to x/y.php');
-        rmdir('running_test/folder/file');
+        rmdir(dirname(__FILE__) . '/running_test/folder/file');
         $this->assertEquals('x', $router->get_responsible_controller()->whoami, 'Failed routing to x/y.php');
-        unlink('running_test/folder/file.php');
+        unlink(dirname(__FILE__) . '/running_test/folder/file.php');
         $this->assertEquals('y', $router->get_responsible_controller()->whoami, 'Failed routing to x/index.php');
-        unlink('running_test/folder/index.php');
+        unlink(dirname(__FILE__) . '/running_test/folder/index.php');
         $this->assertEquals('z', $router->get_responsible_controller()->whoami, 'Failed routing to x.php');
-        rmdir('running_test/folder');
+        rmdir(dirname(__FILE__) . '/running_test/folder');
         $this->assertEquals('z', $router->get_responsible_controller()->whoami, 'Failed routing to x.php');
-        unlink('running_test/folder.php');
-        rmdir('running_test');
+        unlink(dirname(__FILE__) . '/running_test/folder.php');
+        rmdir(dirname(__FILE__) . '/running_test');
     }
 
     /**
