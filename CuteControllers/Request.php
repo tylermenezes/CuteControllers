@@ -2,10 +2,16 @@
 
 namespace CuteControllers;
 
-// Load these in case there's no SPL class loader
-require_once('Router.php');
-require_once('HttpError.php');
+require_once(implode(DIRECTORY_SEPARATOR, [dirname(__FILE__), 'Internal', 'require.php']));
 
+/**
+ * Represents a HTTP web request
+ *
+ * @author      Tyler Menezes <tylermenezes@gmail.com>
+ * @copyright   Copyright (c) Tyler Menezes. Released under the BSD license.
+ *
+ * @package     CuteControllers
+ */
 class Request
 {
     public $method;
@@ -63,15 +69,15 @@ class Request
             $scheme = 'http';
         }
 
-        $username = isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : FALSE;
-        $password = isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : FALSE;
+        $username = isset($_SERVER['PHP_AUTH_USER'])? $_SERVER['PHP_AUTH_USER'] : false;
+        $password = isset($_SERVER['PHP_AUTH_PW'])? $_SERVER['PHP_AUTH_PW'] : false;
         $host = $_SERVER['SERVER_NAME'];
         $port = isset($_SERVER['SERVER_PORT'])? $_SERVER['SERVER_PORT'] : ($scheme === 'https'? 443 : 80);
         $path = $_SERVER['REQUEST_URI'];
         $query = (isset($_SERVER['QUERY_STRING']) && strlen($_SERVER['QUERY_STRING']) > 0)? $_SERVER['QUERY_STRING'] :
-                                                                                            NULL;
+                                                                                            null;
 
-        if ($query !== NULL) {
+        if ($query !== null) {
             $path = substr($path, 0, strlen($path) - (strlen($query) + 1));
         }
 
@@ -90,17 +96,17 @@ class Request
      * @param array  $post      Optional, POST data
      * @param string $body      Optional, POST body
      */
-    public static function FromUrl($url, $method = 'GET', $user_ip = NULL, $post = NULL, $body = NULL)
+    public static function FromUrl($url, $method = 'GET', $user_ip = null, $post = null, $body = null)
     {
         $parts = parse_url($url);
 
         $scheme = $parts['scheme'];
         $host = $parts['host'];
         $port = isset($parts['port']) ? $parts['port'] : ($scheme === 'https' ? 443 : 80);
-        $username = isset($parts['user']) ? $parts['user'] : NULL;
-        $password = isset($parts['pass']) ? $parts['pass'] : NULL;
+        $username = isset($parts['user']) ? $parts['user'] : null;
+        $password = isset($parts['pass']) ? $parts['pass'] : null;
         $path = isset($parts['path']) ? $parts['path'] : '/';
-        $query = isset($parts['query']) ? $parts['query'] : NULL;
+        $query = isset($parts['query']) ? $parts['query'] : null;
 
         return new self($method, $scheme, $username, $password, $host, $port, $path, $query, $user_ip, $post, $body);
     }
@@ -112,7 +118,7 @@ class Request
      */
     public function get($name)
     {
-        return isset($this->_get[$name])? $this->_get[$name] : NULL;
+        return isset($this->_get[$name])? $this->_get[$name] : null;
     }
 
     /**
@@ -122,7 +128,7 @@ class Request
      */
     public function post($name)
     {
-        return isset($this->_post[$name])? $this->_post[$name] : NULL;
+        return isset($this->_post[$name])? $this->_post[$name] : null;
     }
 
     /**
@@ -132,7 +138,7 @@ class Request
      */
     public function param($name)
     {
-        return ($this->get($name) !== NULL)? $this->get($name) : $this->post($name);
+        return ($this->get($name) !== null)? $this->get($name) : $this->post($name);
     }
 
     /**
@@ -148,10 +154,10 @@ class Request
                 return array_pop($pathparts);
                 break;
             case 'file_name':
-                return strpos($this->file, '.') !== FALSE? substr($this->file, 0, strrpos($this->file, '.')) : $this->file;
+                return strpos($this->file, '.') !== false? substr($this->file, 0, strrpos($this->file, '.')) : $this->file;
                 break;
             case 'file_ext':
-                return strrpos($this->file, '.') !== FALSE? substr($this->file, strrpos($this->file, '.') + 1) : FALSE;
+                return strrpos($this->file, '.') !== false? substr($this->file, strrpos($this->file, '.') + 1) : false;
                 break;
             case 'segments':
                 return explode('/', $this->path);

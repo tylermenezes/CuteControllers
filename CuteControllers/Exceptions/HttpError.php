@@ -2,15 +2,25 @@
 
 namespace CuteControllers;
 
+require_once(implode(DIRECTORY_SEPARATOR, [dirname(dirname(__FILE__)), 'Internal', 'require.php']));
+
+/**
+ * Represents a HTTP status code
+ *
+ * @author      Tyler Menezes <tylermenezes@gmail.com>
+ * @copyright   Copyright (c) Tyler Menezes. Released under the BSD license.
+ *
+ * @package     CuteControllers
+ */
 class HttpError extends \Exception
 {
-    protected $details = NULL;
+    protected $details = null;
     public function getDetails()
     {
         return $this->details;
     }
 
-    public function __construct($code, $details = NULL)
+    public function __construct($code, $details = null)
     {
         $this->details = $details;
         $this->code = $code;

@@ -2,6 +2,16 @@
 
 namespace CuteControllers;
 
+require_once(implode(DIRECTORY_SEPARATOR, [dirname(__FILE__), 'Internal', 'require.php']));
+
+/**
+ * Makes a class into a CuteControllers router.
+ *
+ * @author      Tyler Menezes <tylermenezes@gmail.com>
+ * @copyright   Copyright (c) Tyler Menezes. Released under the BSD license.
+ *
+ * @package     CuteControllers
+ */
 trait Controller
 {
     public $routing_information;
@@ -157,7 +167,7 @@ trait Controller
                 echo serialize($response);
             case 'php':
                 header("Content-type: application/vnd.php.serialized");
-                echo var_export($response, TRUE);
+                echo var_export($response, true);
                 break;
             default:
                 if (is_array($response) || is_object($response)) {
@@ -180,7 +190,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->get($require) === NULL) {
+            if ($this->request->get($require) === null) {
                 throw new \CuteControllers\HttpError(400);
             }
         }
@@ -194,7 +204,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->post($require) === NULL) {
+            if ($this->request->post($require) === null) {
                 throw new \CuteControllers\HttpError(400);
             }
         }
@@ -208,7 +218,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->param($require) === NULL) {
+            if ($this->request->param($require) === null) {
                 throw new \CuteControllers\HttpError(400);
             }
         }

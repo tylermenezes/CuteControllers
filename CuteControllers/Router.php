@@ -2,23 +2,29 @@
 
 namespace CuteControllers;
 
-// For the .001% of people who are on PHP 5.4+ and not using an SPL Class Loader, load the files ourselves:
-require_once('Request.php');
-require_once('HttpError.php');
-require_once('ControllerFileTrie.php');
-require_once('Controller.php');
+require_once(implode(DIRECTORY_SEPARATOR, [dirname(__FILE__), 'Internal', 'require.php']));
 
+/**
+ * Performs routing for a web request.
+ *
+ * @author      Tyler Menezes <tylermenezes@gmail.com>
+ * @copyright   Copyright (c) Tyler Menezes. Released under the BSD license.
+ *
+ * @package     CuteControllers
+ */
 class Router
 {
-    protected static $instance = NULL;
+    const default_file_name = 'index';
+
+    protected static $instance = null;
     /**
      * Begins routing
      * @param  string  $controllers_directory The directory to load controllers from
      * @param  Request $request               The request to route for
      */
-    public static function start($controllers_directory = NULL, $request = NULL)
+    public static function start($controllers_directory = null, $request = null)
     {
-        if (static::$instance === NULL) {
+        if (static::$instance === null) {
             static::$instance = new static();
         }
 
@@ -33,7 +39,7 @@ class Router
      */
     public static function rewrite($from, $to)
     {
-        if (static::$instance === NULL) {
+        if (static::$instance === null) {
             static::$instance = new static();
         }
 
@@ -93,11 +99,11 @@ class Router
 
 
     protected $rewrites = [];
-    protected $controllers_directory = NULL;
+    protected $controllers_directory = null;
 
-    public function __construct($controllers_directory = NULL)
+    public function __construct($controllers_directory = null)
     {
-        if ($controllers_directory !== NULL) {
+        if ($controllers_directory !== null) {
             $this->controllers_directory = $controllers_directory;
         }
     }
@@ -106,14 +112,14 @@ class Router
      * Begins routing
      * @param  Request $request The request to route for
      */
-    public function route($request = NULL)
+    public function route($request = null)
     {
         // If the path to the controllers directory wasn't set, throw an exception
-        if ($this->controllers_directory === NULL) {
+        if ($this->controllers_directory === null) {
             throw new \BadFunctionCallException('Must set a controllers directory before calling start.');
         }
 
-        if ($request === NULL) {
+        if ($request === null) {
             $request = Request::current();
         }
         $responsible_controller = $this->get_responsible_controller($request);
@@ -125,22 +131,35 @@ class Router
      * @param  Request $request The request to find a controller for
      * @return object           Controller
      */
-    public function get_responsible_controller($request = NULL)
+    public function get_responsible_controller($request = null)
     {
-        if ($request === NULL) {
+        if ($request === null) {
             $request = Request::current();
         }
 
         // Find the controller which should handle this
-        $trie = new ControllerFileTrie($request->path);
-        $best_match = $trie->find_closest_filesystem_match($this->controllers_directory);
+        // Remove the extension from the path, if one exists
+        $args = array_merge(array_filter(explode('/', $request->path)));
+        if (strpos($args[count($args)-1], '.') !== false) {
+            $args[count($args)-1] = substr($args[count($args)-1], 0, strpos($args[count($args)-1], '.'));
+        }
 
-        if ($best_match === NULL) {
+        // Find the best match
+        $dir = $this->controllers_directory;
+        $best_match = self::get_best_match($args, function($potential_match) use ($dir) {
+            return file_exists($dir.DIRECTORY_SEPARATOR.$potential_match.'.php');
+        });
+
+        if ($best_match === null) {
             throw new HttpError(404);
         }
 
-        $controller = static::get_class_from_path($best_match->path);
-        $controller->routing_information = $best_match;
+        $controller = static::get_class_from_path($dir.DIRECTORY_SEPARATOR.$best_match.'.php');
+        $controller->routing_information = (object)[
+            'path' => $best_match,
+            'unmatched_path' => substr(implode('/', $args), strlen($best_match) + 1)
+        ];
+
         $controller->request = $request;
 
         return $controller;
@@ -168,10 +187,46 @@ class Router
             $from = $rewrite['from'];
             $to = $rewrite['to'];
 
-            $request->uri = preg_replace('/^' + str_replace('/', '\\/', $from) + '$/i', $to, $request->uri);
+            $request->uri = preg_replace('/^'.str_replace('/', '\\/', $from).'$/i', $to, $request->uri);
         }
 
         return $request;
+    }
+
+    /**
+     * Gets the best-matching controller match, given a match function
+     *
+     * @param $arguments        array       List of position-wise command-line arguments
+     * @param $match_function   callable    Match function, taking a match and returning true if it's valid
+     * @return mixed                        Best matching string, or null if no match was found
+     */
+    private static function get_best_match($arguments, $match_function)
+    {
+        foreach (self::get_potential_matches($arguments) as $match) {
+            if ($match_function($match)) {
+                return $match;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Gets a list of potential locations for the controllers.
+     *
+     * @param $arguments    array   The list of position-wise command-line arguments
+     * @return array                List of potential locations from most to least specific, relative to nothing, without any extensions
+     */
+    private static function get_potential_matches($arguments)
+    {
+        $potential_matches = [implode(DIRECTORY_SEPARATOR, $arguments) . DIRECTORY_SEPARATOR . self::default_file_name];
+        do {
+            $potential_matches[] = implode(DIRECTORY_SEPARATOR, $arguments);
+            array_pop($arguments);
+            $potential_matches[] = implode(DIRECTORY_SEPARATOR, array_merge($arguments, [self::default_file_name]));
+        } while (count($arguments) > 0);
+
+        return $potential_matches;
     }
 
     /**
@@ -233,10 +288,10 @@ class Router
         // tl;dr: This function is magic.
 
         $fp = fopen($path, 'r');
-        $class = $namespace = $buffer = NULL;
+        $class = $namespace = $buffer = null;
         $i = 0;
 
-        while ($class === NULL) { // The namespace of the class can only be changed before the class is declared.
+        while ($class === null) { // The namespace of the class can only be changed before the class is declared.
 
             // If our file pointer is at EOF, this file just isn't classy. Throw an exception, because what kind of
             // person asks for class information about a file without a class?!
