@@ -36,20 +36,27 @@ trait Controller
 
         $this->cc_call_prefixed_methods('before_');
 
-        $result = $this->cc_try_methods(array(
-            $method . '_' . $action . '_' . $ext => $url_params,                     // get_foo_html
-            $method . '_' . $action => $url_params,                                  // get_foo
-            'action_' . $action . '_' . $ext => $url_params,                         // action_foo_html
-            'action_' . $action => $url_params,                                      // action_foo
+        $to_try_methods = [];
 
+        // If an action was specified, add that first.
+        if ($action) {
+            $to_try_methods = array_merge($to_try_methods, [
+                $method . '_' . $action . '_' . $ext => $url_params,                     // get_foo_html
+                $method . '_' . $action => $url_params,                                  // get_foo
+                'action_' . $action . '_' . $ext => $url_params,                         // action_foo_html
+                'action_' . $action => $url_params                                       // action_foo
+            ]);
+        }
+
+        $to_try_methods = array_merge($to_try_methods, [
             $method . '_index' => $full_url_params,                                  // get_index
             $method . '_index_' . $ext => $full_url_params,                          // get_index_html
             'action_index_' . $ext => $full_url_params,                              // action_index_html
             'action_index' => $full_url_params                                       // action_index
-        ));
+        ]);
 
+        $result = $this->cc_try_methods($to_try_methods);
         $this->cc_generate_response($result);
-
         $this->cc_call_prefixed_methods('after_');
     }
 
@@ -83,9 +90,9 @@ trait Controller
         {
             try {
                 return $this->cc_call_method($name, $args);
-            } catch (\InvalidArgumentException $ex) {
+            } catch (NoArgumentMatchException $ex) {
                 throw new \CuteControllers\HttpError(404);
-            } catch (\BadMethodCallException $ex) { }
+            } catch (NoMethodMatchException $ex) { }
         }
 
 
@@ -101,7 +108,7 @@ trait Controller
     private function cc_call_method($name, $args)
     {
         if (!method_exists($this, $name)) {
-            throw new \BadMethodCallException();
+            throw new NoMethodMatchException();
         }
 
 
@@ -112,7 +119,7 @@ trait Controller
         ) {
             return call_user_func_array(array($this, $name), $args);
         } else {
-            throw new \InvalidArgumentException();
+            throw new NoArgumentMatchException();
         }
     }
 

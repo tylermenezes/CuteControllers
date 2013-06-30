@@ -80,13 +80,13 @@ class Router
      */
     public static function redirect($uri, $status_code = 302)
     {
-        $codes = array(
+        $codes = [
             300 => "Multiple Choices",
             301 => "Moved Permanently",
             302 => "Found",
             303 => "See Other",
             307 => "Temporary Redirect"
-        );
+        ];
 
         if (!array_key_exists($status_code, $codes)) {
             throw new \InvalidArgumentException('Status code must be a 3xx code for redirects.');
