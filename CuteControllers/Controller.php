@@ -236,7 +236,7 @@ trait Controller
      * @param  string $to      New location
      * @param  [int]  $status  HTTP status code to send
      */
-    protected function redirect($to, $status = null)
+    protected function redirect($to, $status = 302)
     {
         \CuteControllers\Router::redirect($to, $status);
     }
