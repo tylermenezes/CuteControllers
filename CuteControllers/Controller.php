@@ -197,7 +197,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->get($require) === null) {
+            if (!$this->request->get($require)) {
                 throw new \CuteControllers\HttpError(400);
             }
         }
@@ -211,7 +211,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->post($require) === null) {
+            if (!$this->request->post($require)) {
                 throw new \CuteControllers\HttpError(400);
             }
         }
@@ -225,7 +225,7 @@ trait Controller
     {
         $required = func_get_args();
         foreach ($required as $require) {
-            if ($this->request->param($require) === null) {
+            if (!$this->request->param($require)) {
                 throw new \CuteControllers\HttpError(400);
             }
         }
