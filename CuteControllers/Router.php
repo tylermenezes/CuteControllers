@@ -154,10 +154,10 @@ class Router
             throw new HttpError(404);
         }
 
-        $controller = static::get_class_from_path($dir.DIRECTORY_SEPARATOR.$best_match.'.php');
+        $controller = static::get_class_from_path($dir.DIRECTORY_SEPARATOR.$best_match['path'].'.php');
         $controller->routing_information = (object)[
-            'path' => $best_match,
-            'unmatched_path' => substr(implode('/', $args), strlen($best_match) + 1)
+            'path' => $best_match['path'],
+            'unmatched_path' => implode('/', array_slice($args, $best_match['count']))
         ];
 
         $controller->request = $request;
@@ -203,7 +203,7 @@ class Router
     private static function get_best_match($arguments, $match_function)
     {
         foreach (self::get_potential_matches($arguments) as $match) {
-            if ($match_function($match)) {
+            if ($match_function($match['path'])) {
                 return $match;
             }
         }
@@ -219,11 +219,17 @@ class Router
      */
     private static function get_potential_matches($arguments)
     {
-        $potential_matches = [implode(DIRECTORY_SEPARATOR, $arguments) . DIRECTORY_SEPARATOR . self::default_file_name];
+        if (count($arguments) === 0) {
+            return [['path' => self::default_file_name, 'count' => 0]];
+        }
+
+        $potential_matches = [['path' => implode(DIRECTORY_SEPARATOR, $arguments) . DIRECTORY_SEPARATOR . self::default_file_name,
+                               'count' => count($arguments)]];
         do {
-            $potential_matches[] = implode(DIRECTORY_SEPARATOR, $arguments);
+            $potential_matches[] = ['path' => implode(DIRECTORY_SEPARATOR, $arguments), 'count' => count($arguments)];
             array_pop($arguments);
-            $potential_matches[] = implode(DIRECTORY_SEPARATOR, array_merge($arguments, [self::default_file_name]));
+            $potential_matches[] = ['path' => implode(DIRECTORY_SEPARATOR, array_merge($arguments, [self::default_file_name])),
+                                    'count' => count($arguments)];
         } while (count($arguments) > 0);
 
         return $potential_matches;
