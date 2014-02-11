@@ -115,7 +115,7 @@ trait Controller
         $reflection = new \ReflectionMethod($this, $name);
         if (
                 $reflection->isPublic() &&
-                $reflection->getNumberOfParameters() === count($args)
+                $reflection->getNumberOfRequiredParameters() <= count($args)
         ) {
             return call_user_func_array(array($this, $name), $args);
         } else {
