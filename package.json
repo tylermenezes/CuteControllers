@@ -1,10 +1,11 @@
 {
   "name": "cuter-controllers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "js controllers made simplyier",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postpublish": "node ./scripts/postpublish.js"
   },
   "repository": {
     "type": "git",
@@ -17,5 +18,8 @@
   "dependencies": {
     "co": "~3.0.5",
     "express": "~3.4.8"
-  }
+},
+"engines": {
+		"node": ">0.11.x"
+	}
 }
