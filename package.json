@@ -1,0 +1,21 @@
+{
+  "name": "cuter-controllers",
+  "version": "0.0.1",
+  "description": "js controllers made simplyier",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tangmi/cuter-controllers"
+  },
+  "author": "tangmi",
+  "bugs": {
+    "url": "https://github.com/tangmi/cuter-controllers/issues"
+  },
+  "dependencies": {
+    "co": "~3.0.5",
+    "express": "~3.4.8"
+  }
+}
