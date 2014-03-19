@@ -37,13 +37,12 @@ A quick and simple way to build routers in JavaScript.
     ```
 1. Save it to `[/path/to/your/project]/controllers/<controllername>.js`
 1. Start the router! In your index file, run:
-    ``` js
     require('cuter-controllers').start('./controllers');
-    ```
-    Then run with the `--harmony` tag:
-    ``` sh
+
+    * Then run with the `--harmony` tag:
+
     node --harmony server.js
-    ```
+
 1. Visit it on the web! Here's a list of URLs which should work:
     * `/test`
     * `/test/index`
