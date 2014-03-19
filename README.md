@@ -16,7 +16,7 @@ A quick and simple way to build routers in JavaScript.
 
 `npm install --save cuter-controllers`
 
-Make a controller. Here's a sample using the REST controller trait:
+Make a controller. Here's a sample using the REST controller trait (functions are JavaScript generators and either `return` or `throw` data. `req` is an [express request object](http://expressjs.com/3x/api.html#req.params)):
 ```js
 module.exports = {
     get_index: function * (req) {
@@ -27,6 +27,9 @@ module.exports = {
         return {
             'my_name': 'tylermenezes'
         };
+    },
+    get_error: function * (req) {
+        throw 'good error!';
     },
     get_response: function * (req) {
         var res = new Response(418).headers({
@@ -40,13 +43,11 @@ module.exports = {
 Save it to `[/path/to/your/project]/controllers/<controllername>.js`
 
 Start the router! In your index file, run:
-
 ```js
 require('cuter-controllers').start('./controllers');
 ```
 
 Then run with the `--harmony` tag:
-
 ```sh
 node --harmony server.js
 ```
