@@ -59,6 +59,7 @@ Visit it on the web! Here's a list of URLs which should work:
 * `/test`
 * `/test/index`
 * `/test/demo`
+* `/test/error`
 * `/test/response`
 
 # Controllers
