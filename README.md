@@ -24,11 +24,13 @@ module.exports = {
         return;
     },
     get_demo: function * (req) {
+        // object literals will be stringified to json
         return {
             'my_name': 'tylermenezes'
         };
     },
     get_error: function * (req) {
+        // automatically sends a status code 500
         throw 'good error!';
     },
     get_response: function * (req) {
