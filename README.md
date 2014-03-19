@@ -32,7 +32,8 @@ module.exports = {
         throw 'good error!';
     },
     get_response: function * (req) {
-        var res = new Response(418).headers({
+        // send a specific status code + custom headers with a Response object
+        var res = new require('cuter-controllers').Response(418).headers({
             "Content-Type": "text/html"
         }).body('<b>Hello world!</b>');
         return res;
