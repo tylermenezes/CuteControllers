@@ -24,15 +24,18 @@ module.exports = {
         return;
     },
     get_demo: function * (req) {
+        // object literals will be stringified to json
         return {
             'my_name': 'tylermenezes'
         };
     },
     get_error: function * (req) {
+        // automatically sends a status code 500
         throw 'good error!';
     },
     get_response: function * (req) {
-        var res = new Response(418).headers({
+        // send a specific status code + custom headers with a Response object
+        var res = new require('cuter-controllers').Response(418).headers({
             "Content-Type": "text/html"
         }).body('<b>Hello world!</b>');
         return res;
@@ -56,6 +59,7 @@ Visit it on the web! Here's a list of URLs which should work:
 * `/test`
 * `/test/index`
 * `/test/demo`
+* `/test/error`
 * `/test/response`
 
 # Controllers
