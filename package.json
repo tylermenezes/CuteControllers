@@ -1,0 +1,25 @@
+{
+	"name": "cuter-controllers",
+	"version": "0.0.6",
+	"description": "js controllers made simplyier",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"All tests succeed!\" && exit 0",
+		"postpublish": "node ./scripts/postpublish.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/tangmi/cuter-controllers"
+	},
+	"author": "tangmi",
+	"bugs": {
+		"url": "https://github.com/tangmi/cuter-controllers/issues"
+	},
+	"dependencies": {
+		"co": "~3.0.5",
+		"express": "~3.4.8"
+	},
+	"engines": {
+		"node": ">0.11.x"
+	}
+}
